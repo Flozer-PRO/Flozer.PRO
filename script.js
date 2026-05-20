@@ -1,3 +1,55 @@
+// --- ИНИЦИАЛИЗАЦИЯ ХОЛСТА И НАСТРОЕК ---
+const canvas = document.createElement('canvas');
+const ctx = canvas.getContext('2d');
+document.body.appendChild(canvas);
+
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// Стили для страницы, чтобы убрать прокрутку
+document.body.style.margin = "0";
+document.body.style.overflow = "hidden";
+document.body.style.background = "#111";
+
+// Создаем интерфейс для очков
+const scoreElement = document.createElement('div');
+scoreElement.style.position = 'absolute';
+scoreElement.style.top = '20px';
+scoreElement.style.left = '20px';
+scoreElement.style.color = '#fff';
+scoreElement.style.fontFamily = 'Arial, sans-serif';
+scoreElement.style.fontSize = '24px';
+scoreElement.style.fontWeight = 'bold';
+scoreElement.innerText = "Score: 0";
+document.body.appendChild(scoreElement);
+
+// --- ИГРОВЫЕ ПЕРЕМЕННЫЕ ---
+let score = 0;
+let currentBiome = 'green'; // 'green', 'red', 'dark'
+const particles = [];
+const mobs = [];
+
+const player = {
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+    radius: 25,
+    color: '#f1c40f', // Желтый Hornex-игрок
+    speed: 0.08,
+    emotion: 'neutral'
+};
+
+const mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+
+// Управление мышью
+window.addEventListener('mousemove', (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+});
+
 // --- ОБНОВЛЕННЫЕ НАСТРОЙКИ ЛЕПЕСТКОВ ---
 const petals = [];
 const petalCount = 5;
@@ -13,6 +65,109 @@ for (let i = 0; i < petalCount; i++) {
     });
 }
 
+// --- ФУНКЦИЯ ОТРЫСОВКИ ЛИЦА HORNEX ---
+function drawHornexFace(x, y, radius, emotion) {
+    ctx.fillStyle = '#000';
+    
+    // Глаза базовые
+    let eyeOffset = radius * 0.35;
+    let eyeRadius = radius * 0.15;
+    
+    // Смещение глаз в сторону мышки для эффекта взгляда
+    const angle = Math.atan2(mouse.y - y, mouse.x - x);
+    const lookDist = radius * 0.1;
+    const lookX = Math.cos(angle) * lookDist;
+    const lookY = Math.sin(angle) * lookDist;
+
+    // Левый и правый глаз
+    ctx.beginPath();
+    ctx.arc(x - eyeOffset + lookX, y - eyeOffset + lookY, eyeRadius, 0, Math.PI * 2);
+    ctx.arc(x + eyeOffset + lookX, y - eyeOffset + lookY, eyeRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Рот в зависимости от эмоции
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    if (emotion === 'angry') {
+        // Злой рот (дуга вверх)
+        ctx.arc(x, y + radius * 0.4, radius * 0.2, Math.PI, 0, false);
+    } else if (emotion === 'happy') {
+        // Улыбка
+        ctx.arc(x, y + radius * 0.2, radius * 0.3, 0, Math.PI, false);
+    } else {
+        // Нейтральный рот (полоска)
+        ctx.moveTo(x - radius * 0.2, y + radius * 0.25);
+        ctx.lineTo(x + radius * 0.2, y + radius * 0.25);
+    }
+    ctx.stroke();
+}
+
+// --- СПАВН ЧАСТИЦ (ВЗРЫВ) ---
+function spawnExplosion(x, y, color) {
+    for (let i = 0; i < 12; i++) {
+        const pAngle = Math.random() * Math.PI * 2;
+        const pSpeed = Math.random() * 3 + 2;
+        particles.push({
+            x: x,
+            y: y,
+            vx: Math.cos(pAngle) * pSpeed,
+            vy: Math.sin(pAngle) * pSpeed,
+            radius: Math.random() * 4 + 2,
+            color: color,
+            life: 40
+        });
+    }
+}
+
+// --- СПАВН МОБОВ ---
+function spawnMob() {
+    // Спавним за пределами экрана
+    const angle = Math.random() * Math.PI * 2;
+    const dist = Math.max(canvas.width, canvas.height) + 50;
+    const x = player.x + Math.cos(angle) * dist;
+    const y = player.y + Math.sin(angle) * dist;
+
+    // Характеристики зависят от биома
+    let size, hp, color;
+    if (currentBiome === 'green') {
+        size = Math.random() * 10 + 15;
+        hp = 1;
+        color = '#e67e22'; // Оранжевые жуки
+    } else if (currentBiome === 'red') {
+        size = Math.random() * 15 + 20;
+        hp = 3;
+        color = '#9b59b6'; // Фиолетовые агрессивные мобы
+    } else {
+        size = Math.random() * 8 + 12;
+        hp = 0.5;
+        color = '#34495e'; // Быстрые темные мобы
+    }
+
+    mobs.push({
+        x: x, y: y,
+        vx: 0, vy: 0,
+        s: size,
+        hp: hp,
+        maxHp: hp,
+        c: color,
+        flash: 0
+    });
+}
+
+// Интервал спавна мобов (каждые 1.5 секунды)
+setInterval(() => {
+    if (mobs.length < 15) spawnMob();
+}, 1500);
+
+// Переключение биомов клавишами 1, 2, 3 для тестов
+window.addEventListener('keydown', (e) => {
+    if (e.key === '1') currentBiome = 'green';
+    if (e.key === '2') currentBiome = 'red';
+    if (e.key === '3') currentBiome = 'dark';
+});
+
+
 // --- ГЛАВНЫЙ ЦИКЛ ---
 function update() {
     // Отрисовка фона (биомы)
@@ -27,6 +182,13 @@ function update() {
     // Движение игрока
     player.x += (mouse.x - player.x) * player.speed;
     player.y += (mouse.y - player.y) * player.speed;
+
+    // Меняем эмоцию, если враги слишком близко
+    let enemyClose = false;
+    mobs.forEach(m => {
+        if(Math.hypot(player.x - m.x, player.y - m.y) < 200) enemyClose = true;
+    });
+    player.emotion = enemyClose ? 'angry' : 'happy';
 
     // Вращение и логика лепестков
     currentAngle += 0.04;
@@ -113,3 +275,7 @@ function update() {
     ctx.globalAlpha = 1;
 
     requestAnimationFrame(update);
+}
+
+// Запуск игры
+update();
