@@ -1,171 +1,115 @@
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const scoreElement = document.getElementById('score');
-
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
-window.addEventListener('resize', () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-});
-
-const player = {
-    x: canvas.width / 2,
-    y: canvas.height / 2,
-    radius: 25,
-    color: '#ffcc00', 
-    speed: 0.08,
-    emotion: 'normal'
-};
-
-const mouse = { x: canvas.width / 2, y: canvas.height / 2 };
-window.addEventListener('mousemove', (event) => {
-    mouse.x = event.clientX;
-    mouse.y = event.clientY;
-});
-
-// Твои лепестки (дальность 60, как была)
+// --- ОБНОВЛЕННЫЕ НАСТРОЙКИ ЛЕПЕСТКОВ ---
 const petals = [];
 const petalCount = 5;
-const rotationSpeed = 0.03;
 let currentAngle = 0;
 
 for (let i = 0; i < petalCount; i++) {
     petals.push({
-        distance: 60, 
-        radius: 10,
-        baseColor: '#ffffff', 
-        currentColor: '#ffffff'
+        baseDist: 65, 
+        dist: 65,
+        radius: 13,
+        angleOffset: (i * Math.PI * 2) / petalCount,
+        hitFlash: 0 // Таймер покраснения лепестка
     });
 }
 
-// Кнопки мыши для эмоций
-window.addEventListener('mousedown', (event) => {
-    if (event.button === 0) player.emotion = 'angry';
-    else if (event.button === 2) player.emotion = 'sad';
-});
-window.addEventListener('mouseup', () => player.emotion = 'normal');
-window.addEventListener('contextmenu', (e) => e.preventDefault());
-
-const mobs = [];
-let score = 0;
-let currentBiome = 'green'; 
-
-const greenTier = ['Common', 'Unusual', 'Rare'];
-const redTier = ['Epic', 'Legendary', 'Mythic'];
-const blackTier = ['Ultra', 'Super', 'Hyper'];
-
-setInterval(() => {
-    if (currentBiome === 'green') currentBiome = 'red';
-    else if (currentBiome === 'red') currentBiome = 'black';
-    else currentBiome = 'green';
-}, 10000);
-
-function spawnMob() {
-    if (mobs.length < 10) {
-        let mobType;
-        if (currentBiome === 'green') {
-            mobType = { name: greenTier[Math.floor(Math.random() * 3)], size: 25, color: '#2ecc71', hp: 3, maxHp: 3, points: 10 };
-        } else if (currentBiome === 'red') {
-            mobType = { name: redTier[Math.floor(Math.random() * 3)], size: 35, color: '#e74c3c', hp: 6, maxHp: 6, points: 50 };
-        } else {
-            mobType = { name: blackTier[Math.floor(Math.random() * 3)], size: 45, color: '#2c3e50', hp: 12, maxHp: 12, points: 200 };
-        }
-        mobs.push({ 
-            x: Math.random() * canvas.width, 
-            y: Math.random() * canvas.height, 
-            ...mobType,
-            flash: 0 
-        });
-    }
-}
-setInterval(spawnMob, 1500);
-
-function draw() {
-    // Фон
-    ctx.fillStyle = currentBiome === 'green' ? '#1e392a' : (currentBiome === 'red' ? '#3b1a1a' : '#050505');
+// --- ГЛАВНЫЙ ЦИКЛ ---
+function update() {
+    // Отрисовка фона (биомы)
+    ctx.fillStyle = currentBiome === 'green' ? '#27ae60' : (currentBiome === 'red' ? '#c0392b' : '#111');
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Сетка
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    for(let i=0; i<canvas.width; i+=50) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke(); }
+    for(let i=0; i<canvas.height; i+=50) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(canvas.width,i); ctx.stroke(); }
 
     // Движение игрока
     player.x += (mouse.x - player.x) * player.speed;
     player.y += (mouse.y - player.y) * player.speed;
 
-    // Лепестки и Урон
-    currentAngle += rotationSpeed;
-    petals.forEach((petal, i) => {
-        const pAngle = currentAngle + (i * Math.PI * 2) / petalCount;
-        const px = player.x + Math.cos(pAngle) * petal.distance;
-        const py = player.y + Math.sin(pAngle) * petal.distance;
+    // Вращение и логика лепестков
+    currentAngle += 0.04;
+    petals.forEach(p => {
+        p.dist = p.baseDist + Math.sin(currentAngle * 2) * 5; // Анимация дыхания
+        
+        const x = player.x + Math.cos(currentAngle + p.angleOffset) * p.dist;
+        const y = player.y + Math.sin(currentAngle + p.angleOffset) * p.dist;
 
-        ctx.fillStyle = petal.currentColor;
+        // ЛОГИКА ПОКРАСНЕНИЯ ЛЕПЕСТКА
+        if (p.hitFlash > 0) {
+            ctx.fillStyle = '#ff0000'; // Красный при ударе
+            p.hitFlash--;
+        } else {
+            ctx.fillStyle = '#ffffff'; // Обычный белый
+        }
+
         ctx.beginPath();
-        ctx.arc(px, py, petal.radius, 0, Math.PI * 2);
+        ctx.arc(x, y, p.radius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Проверка урона
-        mobs.forEach((mob, mIdx) => {
-            const d = Math.hypot(px - mob.x, py - mob.y);
-            if (d < petal.radius + mob.size) {
-                mob.hp -= 0.05;
-                mob.flash = 3; // Анимация мигания при уроне
-                if (mob.hp <= 0) {
-                    score += mob.points;
-                    scoreElement.innerText = `Score: ${Math.floor(score)}`;
-                    mobs.splice(mIdx, 1);
+        // Проверка столкновения с мобами
+        mobs.forEach((m, idx) => {
+            const distance = Math.hypot(x - m.x, y - m.y);
+            if (distance < p.radius + m.s) {
+                // ПРИ СОПРИКОСНОВЕНИИ:
+                m.hp -= 0.15;
+                m.flash = 5;      // Моб становится красным на 5 кадров
+                p.hitFlash = 5;   // Лепесток становится красным на 5 кадров
+                
+                if (m.hp <= 0) {
+                    spawnExplosion(m.x, m.y, m.c);
+                    score += 10;
+                    scoreElement.innerText = "Score: " + score;
+                    mobs.splice(idx, 1);
                 }
             }
         });
     });
 
-    // Игрок
+    // Игрок и лицо
     ctx.fillStyle = player.color;
     ctx.beginPath();
     ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
     ctx.fill();
+    drawHornexFace(player.x, player.y, player.radius, player.emotion);
 
-    // --- ГЛАЗА И РОТ (ПРЯМО ЗДЕСЬ) ---
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 2;
-    // Глаза
-    if (player.emotion === 'angry') {
-        ctx.beginPath(); // Левый глаз (злой)
-        ctx.moveTo(player.x - 15, player.y - 10); ctx.lineTo(player.x - 5, player.y - 5);
-        ctx.moveTo(player.x + 15, player.y - 10); ctx.lineTo(player.x + 5, player.y - 5);
-        ctx.stroke();
-    } else {
-        ctx.fillStyle = '#000';
+    // Мобы
+    mobs.forEach(m => {
+        const angle = Math.atan2(player.y - m.y, player.x - m.x);
+        m.vx += Math.cos(angle) * 0.1;
+        m.vy += Math.sin(angle) * 0.1;
+        m.vx *= 0.95; m.vy *= 0.95;
+        m.x += m.vx; m.y += m.vy;
+
+        // ЛОГИКА ПОКРАСНЕНИЯ МОБА
+        if (m.flash > 0) {
+            ctx.fillStyle = '#ff0000'; // Красный при получении урона
+            m.flash--;
+        } else {
+            ctx.fillStyle = m.c;
+        }
+
         ctx.beginPath();
-        ctx.arc(player.x - 10, player.y - 8, 3, 0, Math.PI * 2);
-        ctx.arc(player.x + 10, player.y - 8, 3, 0, Math.PI * 2);
-        ctx.fill();
-    }
-    // Рот
-    ctx.beginPath();
-    if (player.emotion === 'sad') ctx.arc(player.x, player.y + 15, 10, Math.PI, 0); // Грустный
-    else if (player.emotion === 'angry') { ctx.moveTo(player.x - 10, player.y + 10); ctx.lineTo(player.x + 10, player.y + 10); } // Злой
-    else ctx.arc(player.x, player.y + 5, 10, 0, Math.PI); // Веселый
-    ctx.stroke();
-
-    // Мобы и их ХП
-    mobs.forEach(mob => {
-        mob.x += (player.x - mob.x) * 0.01;
-        mob.y += (player.y - mob.y) * 0.01;
-
-        ctx.fillStyle = mob.flash > 0 ? 'white' : mob.color;
-        if (mob.flash > 0) mob.flash--;
-        
-        ctx.beginPath();
-        ctx.arc(mob.x, mob.y, mob.size, 0, Math.PI * 2);
+        ctx.arc(m.x, m.y, m.s, 0, Math.PI * 2);
         ctx.fill();
 
-        // Полоска ХП
-        ctx.fillStyle = 'red';
-        ctx.fillRect(mob.x - 20, mob.y - mob.size - 10, 40, 5);
-        ctx.fillStyle = 'lime';
-        ctx.fillRect(mob.x - 20, mob.y - mob.size - 10, 40 * (mob.hp / mob.maxHp), 5);
+        // Полоска здоровья
+        const bw = m.s * 1.5;
+        ctx.fillStyle = '#333';
+        ctx.fillRect(m.x - bw/2, m.y - m.s - 12, bw, 4);
+        ctx.fillStyle = '#2ecc71';
+        ctx.fillRect(m.x - bw/2, m.y - m.s - 12, bw * (m.hp/m.maxHp), 4);
     });
 
-    requestAnimationFrame(draw);
-}
-draw();
+    // Отрисовка частиц взрыва
+    particles.forEach((p, i) => {
+        p.x += p.vx; p.y += p.vy; p.life--;
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life / 40;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fill();
+        if (p.life <= 0) particles.splice(i, 1);
+    });
+    ctx.globalAlpha = 1;
+
+    requestAnimationFrame(update);
