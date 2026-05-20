@@ -46,9 +46,9 @@ const player = {
     radius: 30,
     color: "#4CAF50",
     speed: 4,
-    // Здоровье игрока
     maxHp: 100,
-    hp: 100
+    hp: 100,
+    isDead: false // Флаг, чтобы игра не зависала при смерти
 };
 
 // Настройки лепестков
@@ -62,14 +62,15 @@ for (let i = 0; i < petalCount; i++) {
     petals.push({ id: i });
 }
 
-// Массив мобов (теперь они будут круглыми)
+// Массив мобов
 const enemies = [];
 const maxEnemies = 5;
 
 function spawnEnemy() {
+    if (player.isDead) return; // Не спавним, если игрок погиб
+    
     if (enemies.length < maxEnemies) {
         let x, y;
-        // Спавним за пределами экрана, чтобы они не появлялись прямо на игроке
         if (Math.random() < 0.5) {
             x = Math.random() < 0.5 ? -30 : canvas.width + 30;
             y = Math.random() * canvas.height;
@@ -81,31 +82,33 @@ function spawnEnemy() {
         enemies.push({
             x: x,
             y: y,
-            radius: 20, // Радиус круглого моба
+            radius: 20, // Круглые мобы
             color: "#FF5722",
-            speed: 1.5,
-            hp: 1
+            speed: 1.5
         });
     }
 }
 
-// Интервал спавна мобов
+// Спавн мобов каждые 2 секунды
 setInterval(spawnEnemy, 2000);
 
-// Функция сброса игры при гибели
+// Функция перезапуска
 function resetGame() {
     player.hp = player.maxHp;
     player.x = canvas.width / 2;
     player.y = canvas.height / 2;
-    enemies.length = 0; // Очищаем мобов
-    alert("Игра окончена! Вы погибли. Нажмите ОК, чтобы начать заново.");
+    enemies.length = 0; 
+    player.isDead = false;
+    requestAnimationFrame(gameLoop); // Перезапускаем цикл
 }
 
 // Главный игровой цикл
 function gameLoop() {
+    if (player.isDead) return; // Останавливаем цикл, если умер
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 1. Движение игрока за курсором
+    // 1. Движение игрока
     const dx = mouse.x - player.x;
     const dy = mouse.y - player.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -125,7 +128,7 @@ function gameLoop() {
     ctx.fill();
     ctx.closePath();
 
-    // Отрисовка лепестков и проверка их столкновений с мобами
+    // Отрисовка лепестков и проверка их столкновений
     petals.forEach((petal, index) => {
         const petalAngle = angle + (index * (Math.PI * 2 / petalCount));
         const pX = player.x + Math.cos(petalAngle) * petalDistance;
@@ -137,25 +140,23 @@ function gameLoop() {
         ctx.fill();
         ctx.closePath();
 
-        // Проверка: задел ли лепесток моба
+        // Столкновение лепестка с мобами
         for (let i = enemies.length - 1; i >= 0; i--) {
             const enemy = enemies[i];
             const eDx = pX - enemy.x;
             const eDy = pY - enemy.y;
             const eDist = Math.sqrt(eDx * eDx + eDy * eDy);
 
-            // Если лепесток коснулся круглого моба
             if (eDist < petalRadius + enemy.radius) {
-                enemies.splice(i, 1); // Удаляем моба
+                enemies.splice(i, 1);
             }
         }
     });
 
-    // 3. Движение и отрисовка мобов (Круги) + Урон игроку
+    // 3. Движение и отрисовка круглых мобов + урон
     for (let i = enemies.length - 1; i >= 0; i--) {
         const enemy = enemies[i];
 
-        // Движение к игроку
         const enDx = player.x - enemy.x;
         const enDy = player.y - enemy.y;
         const enDist = Math.sqrt(enDx * enDx + enDy * enDy);
@@ -165,44 +166,47 @@ function gameLoop() {
             enemy.y += (enDy / enDist) * enemy.speed;
         }
 
-        // Отрисовка моба в виде КРУГА
+        // Рисуем круглого моба
         ctx.beginPath();
         ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
         ctx.fillStyle = enemy.color;
         ctx.fill();
         ctx.closePath();
 
-        // Проверка столкновения моба с телом игрока (Урон)
+        // Проверка урона игроку
         if (enDist < player.radius + enemy.radius) {
-            player.hp -= 0.5; // Наносим урон каждый кадр при контакте
+            player.hp -= 0.5; // Отнимаем здоровье
             
-            // Если здоровье кончилось
             if (player.hp <= 0) {
-                resetGame();
-                return; // Прерываем кадр, чтобы перезапустить игру
+                player.isDead = true;
+                setTimeout(() => {
+                    alert("Игра окончена!");
+                    resetGame();
+                }, 10);
+                return;
             }
         }
     }
 
-    // 4. Отрисовка полоски здоровья (HP Bar) над игроком
+    // 4. Полоска здоровья над игроком
     const barWidth = 60;
     const barHeight = 8;
     const barX = player.x - barWidth / 2;
     const barY = player.y - player.radius - 15;
 
-    // Красный фон (потерянное здоровье)
     ctx.fillStyle = "#FF2222";
     ctx.fillRect(barX, barY, barWidth, barHeight);
 
-    // Зеленая линия (текущее здоровье)
     const currentBarWidth = (player.hp / player.maxHp) * barWidth;
-    ctx.fillStyle = "#00FF00";
-    ctx.fillRect(barX, barY, currentBarWidth, barHeight);
+    if (currentBarWidth > 0) {
+        ctx.fillStyle = "#00FF00";
+        ctx.fillRect(barX, barY, currentBarWidth, barHeight);
+    }
 
     requestAnimationFrame(gameLoop);
 }
 
-// Запуск игры
+// Запуск
 gameLoop();
 </script>
 
