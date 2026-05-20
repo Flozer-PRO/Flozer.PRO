@@ -15,7 +15,7 @@ const player = {
     x: canvas.width / 2,
     y: canvas.height / 2,
     radius: 25,
-    color: '#ffcc00', // Жёлтый цвет
+    color: '#ffcc00', 
     speed: 0.08,
     emotion: 'normal'
 };
@@ -63,19 +63,37 @@ window.addEventListener('contextmenu', (event) => {
 const mobs = [];
 let score = 0;
 
+// Функция спавна мобов с РАЗНЫМИ РЕДКОСТЯМИ
 function spawnMob() {
-    if (mobs.length < 8) {
+    if (mobs.length < 10) {
+        const rand = Math.random();
+        let mobType;
+
+        if (rand < 0.6) {
+            // 60% шанс — Обычный (Зеленый)
+            mobType = { type: 'Common', size: 25, color: '#2ecc71', maxHp: 3 };
+        } else if (rand < 0.9) {
+            // 30% шанс — Редкий (Красный)
+            mobType = { type: 'Rare', size: 35, color: '#e74c3c', maxHp: 6 };
+        } else {
+            // 10% шанс — Мифический Босс (Черный с фиолетовым)
+            mobType = { type: 'Mythic', size: 55, color: '#111111', strokeColor: '#9b59b6', maxHp: 15 };
+        }
+
         mobs.push({
-            x: Math.random() * (canvas.width - 40) + 20,
-            y: Math.random() * (canvas.height - 40) + 20,
-            size: 30,
-            color: '#ff3333',
-            hp: 3
+            x: Math.random() * (canvas.width - 60) + 30,
+            y: Math.random() * (canvas.height - 60) + 30,
+            size: mobType.size,
+            color: mobType.color,
+            strokeColor: mobType.strokeColor || null,
+            hp: mobType.maxHp,
+            maxHp: mobType.maxHp,
+            type: mobType.type
         });
     }
 }
 
-setInterval(spawnMob, 1500);
+setInterval(spawnMob, 1200);
 
 function checkCollision(circle, rect) {
     let closestX = Math.max(rect.x, Math.min(circle.x, rect.x + rect.size));
@@ -85,8 +103,37 @@ function checkCollision(circle, rect) {
     return (distanceX * distanceX + distanceY * distanceY) < (circle.radius * circle.radius);
 }
 
+// Функция для рисования крутого фона в стиле Hornex
+function drawHornexGrid() {
+    // Заливаем экран тёмным цветом
+    ctx.fillStyle = '#161a1d';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Рисуем сетку
+    ctx.lineWidth = 1;
+    const gridSize = 50;
+
+    for (let x = 0; x < canvas.width; x += gridSize) {
+        // Чередуем цвета линий: зеленый и красный
+        ctx.strokeStyle = (x % 100 === 0) ? 'rgba(46, 204, 113, 0.15)' : 'rgba(231, 76, 60, 0.1)';
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+    }
+
+    for (let y = 0; y < canvas.height; y += gridSize) {
+        ctx.strokeStyle = (y % 100 === 0) ? 'rgba(46, 204, 113, 0.15)' : 'rgba(231, 76, 60, 0.1)';
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+    }
+}
+
 function gameLoop() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Рисуем Хорнекс-фон вместо простой очистки экрана
+    drawHornexGrid();
 
     player.x += (mouse.x - player.x) * player.speed;
     player.y += (mouse.y - player.y) * player.speed;
@@ -168,11 +215,11 @@ function gameLoop() {
         ctx.stroke();
 
     } else {
-        // --- ОБЫЧНЫЕ ГЛАЗА (ИСПРАВЛЕНО) И РОТИК ---
+        // --- ОБЫЧНЫЕ ГЛАЗА И РОТИК ---
         ctx.fillStyle = '#000000'; 
         ctx.beginPath();
         ctx.ellipse(leftEyeX, eyeY, 6, 8, 0, 0, Math.PI * 2);
-        ctx.ellipse(rightEyeX, eyeY, 6, 8, 0, 0, Math.PI * 2); // Теперь тут тоже 6 и 8, как у первого!
+        ctx.ellipse(rightEyeX, eyeY, 6, 8, 0, 0, Math.PI * 2); 
         ctx.fill();
 
         ctx.fillStyle = '#ffffff'; 
@@ -218,12 +265,17 @@ function gameLoop() {
                 }
 
                 mob.hp -= 1;
-                mob.x += Math.cos(angle) * 15;
-                mob.y += Math.sin(angle) * 15;
+                mob.x += Math.cos(angle) * 12;
+                mob.y += Math.sin(angle) * 12;
 
                 if (mob.hp <= 0) {
                     mobs.splice(mobIndex, 1);
-                    score += 10;
+                    
+                    // Начисление очков в зависимости от редкости моба
+                    if (mob.type === 'Common') score += 10;
+                    if (mob.type === 'Rare') score += 25;
+                    if (mob.type === 'Mythic') score += 100; // За босса много очков!
+                    
                     scoreElement.innerText = "Очки: " + score;
                 }
             }
@@ -235,10 +287,18 @@ function gameLoop() {
         ctx.fillStyle = mob.color;
         ctx.fillRect(mob.x, mob.y, mob.size, mob.size);
         
+        // Если это Мифический моб, рисуем ему фиолетовую обводку
+        if (mob.strokeColor) {
+            ctx.strokeStyle = mob.strokeColor;
+            ctx.lineWidth = 3;
+            ctx.strokeRect(mob.x, mob.y, mob.size, mob.size);
+        }
+        
+        // Полоска здоровья
         ctx.fillStyle = '#ff0000';
         ctx.fillRect(mob.x, mob.y - 10, mob.size, 4);
         ctx.fillStyle = '#00ff00';
-        ctx.fillRect(mob.x, mob.y - 10, mob.size * (mob.hp / 3), 4);
+        ctx.fillRect(mob.x, mob.y - 10, mob.size * (mob.hp / mob.maxHp), 4);
     });
 
     requestAnimationFrame(gameLoop);
