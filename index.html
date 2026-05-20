@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Hornex Clone Mini</title>
+    <title>Flozer.PRO</title>
     <style>
         body {
             margin: 0;
@@ -48,7 +48,7 @@ const player = {
     speed: 4,
     maxHp: 100,
     hp: 100,
-    isDead: false // Флаг, чтобы игра не зависала при смерти
+    isDead: false
 };
 
 // Настройки лепестков
@@ -67,7 +67,7 @@ const enemies = [];
 const maxEnemies = 5;
 
 function spawnEnemy() {
-    if (player.isDead) return; // Не спавним, если игрок погиб
+    if (player.isDead) return;
     
     if (enemies.length < maxEnemies) {
         let x, y;
@@ -82,7 +82,7 @@ function spawnEnemy() {
         enemies.push({
             x: x,
             y: y,
-            radius: 20, // Круглые мобы
+            radius: 20,
             color: "#FF5722",
             speed: 1.5
         });
@@ -99,12 +99,12 @@ function resetGame() {
     player.y = canvas.height / 2;
     enemies.length = 0; 
     player.isDead = false;
-    requestAnimationFrame(gameLoop); // Перезапускаем цикл
+    requestAnimationFrame(gameLoop);
 }
 
 // Главный игровой цикл
 function gameLoop() {
-    if (player.isDead) return; // Останавливаем цикл, если умер
+    if (player.isDead) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -175,7 +175,7 @@ function gameLoop() {
 
         // Проверка урона игроку
         if (enDist < player.radius + enemy.radius) {
-            player.hp -= 0.5; // Отнимаем здоровье
+            player.hp -= 0.5;
             
             if (player.hp <= 0) {
                 player.isDead = true;
