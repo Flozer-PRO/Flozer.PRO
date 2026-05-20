@@ -2,31 +2,209 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flozer.PRO</title>
+    <title>Hornex Clone Mini</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #1a1a1a;
+            background-color: #f0f0f0;
             font-family: Arial, sans-serif;
         }
         canvas {
             display: block;
         }
-        #score {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            color: white;
-            font-size: 24px;
-            user-select: none;
-        }
     </style>
 </head>
 <body>
-    <div id="score">Очки: 0</div>
-    <canvas id="gameCanvas"></canvas>
-    <script src="script.js"></script>
+
+<canvas id="gameCanvas"></canvas>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+// Настройка размеров экрана
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+window.addEventListener("resize", () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+});
+
+// Координаты мыши
+let mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+window.addEventListener("mousemove", (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+});
+
+// Объект игрока
+const player = {
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+    radius: 30,
+    color: "#4CAF50",
+    speed: 4,
+    // Здоровье игрока
+    maxHp: 100,
+    hp: 100
+};
+
+// Настройки лепестков
+const petals = [];
+const petalCount = 3;
+const petalDistance = 60;
+const petalRadius = 12;
+let angle = 0;
+
+for (let i = 0; i < petalCount; i++) {
+    petals.push({ id: i });
+}
+
+// Массив мобов (теперь они будут круглыми)
+const enemies = [];
+const maxEnemies = 5;
+
+function spawnEnemy() {
+    if (enemies.length < maxEnemies) {
+        let x, y;
+        // Спавним за пределами экрана, чтобы они не появлялись прямо на игроке
+        if (Math.random() < 0.5) {
+            x = Math.random() < 0.5 ? -30 : canvas.width + 30;
+            y = Math.random() * canvas.height;
+        } else {
+            x = Math.random() * canvas.width;
+            y = Math.random() < 0.5 ? -30 : canvas.height + 30;
+        }
+        
+        enemies.push({
+            x: x,
+            y: y,
+            radius: 20, // Радиус круглого моба
+            color: "#FF5722",
+            speed: 1.5,
+            hp: 1
+        });
+    }
+}
+
+// Интервал спавна мобов
+setInterval(spawnEnemy, 2000);
+
+// Функция сброса игры при гибели
+function resetGame() {
+    player.hp = player.maxHp;
+    player.x = canvas.width / 2;
+    player.y = canvas.height / 2;
+    enemies.length = 0; // Очищаем мобов
+    alert("Игра окончена! Вы погибли. Нажмите ОК, чтобы начать заново.");
+}
+
+// Главный игровой цикл
+function gameLoop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 1. Движение игрока за курсором
+    const dx = mouse.x - player.x;
+    const dy = mouse.y - player.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist > 5) {
+        player.x += (dx / dist) * player.speed;
+        player.y += (dy / dist) * player.speed;
+    }
+
+    // 2. Вращение лепестков
+    angle += 0.03;
+
+    // Отрисовка игрока
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+    ctx.fillStyle = player.color;
+    ctx.fill();
+    ctx.closePath();
+
+    // Отрисовка лепестков и проверка их столкновений с мобами
+    petals.forEach((petal, index) => {
+        const petalAngle = angle + (index * (Math.PI * 2 / petalCount));
+        const pX = player.x + Math.cos(petalAngle) * petalDistance;
+        const pY = player.y + Math.sin(petalAngle) * petalDistance;
+
+        ctx.beginPath();
+        ctx.arc(pX, pY, petalRadius, 0, Math.PI * 2);
+        ctx.fillStyle = "#FFEB3B";
+        ctx.fill();
+        ctx.closePath();
+
+        // Проверка: задел ли лепесток моба
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            const enemy = enemies[i];
+            const eDx = pX - enemy.x;
+            const eDy = pY - enemy.y;
+            const eDist = Math.sqrt(eDx * eDx + eDy * eDy);
+
+            // Если лепесток коснулся круглого моба
+            if (eDist < petalRadius + enemy.radius) {
+                enemies.splice(i, 1); // Удаляем моба
+            }
+        }
+    });
+
+    // 3. Движение и отрисовка мобов (Круги) + Урон игроку
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        const enemy = enemies[i];
+
+        // Движение к игроку
+        const enDx = player.x - enemy.x;
+        const enDy = player.y - enemy.y;
+        const enDist = Math.sqrt(enDx * enDx + enDy * enDy);
+
+        if (enDist > 1) {
+            enemy.x += (enDx / enDist) * enemy.speed;
+            enemy.y += (enDy / enDist) * enemy.speed;
+        }
+
+        // Отрисовка моба в виде КРУГА
+        ctx.beginPath();
+        ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
+        ctx.fillStyle = enemy.color;
+        ctx.fill();
+        ctx.closePath();
+
+        // Проверка столкновения моба с телом игрока (Урон)
+        if (enDist < player.radius + enemy.radius) {
+            player.hp -= 0.5; // Наносим урон каждый кадр при контакте
+            
+            // Если здоровье кончилось
+            if (player.hp <= 0) {
+                resetGame();
+                return; // Прерываем кадр, чтобы перезапустить игру
+            }
+        }
+    }
+
+    // 4. Отрисовка полоски здоровья (HP Bar) над игроком
+    const barWidth = 60;
+    const barHeight = 8;
+    const barX = player.x - barWidth / 2;
+    const barY = player.y - player.radius - 15;
+
+    // Красный фон (потерянное здоровье)
+    ctx.fillStyle = "#FF2222";
+    ctx.fillRect(barX, barY, barWidth, barHeight);
+
+    // Зеленая линия (текущее здоровье)
+    const currentBarWidth = (player.hp / player.maxHp) * barWidth;
+    ctx.fillStyle = "#00FF00";
+    ctx.fillRect(barX, barY, currentBarWidth, barHeight);
+
+    requestAnimationFrame(gameLoop);
+}
+
+// Запуск игры
+gameLoop();
+</script>
+
 </body>
 </html>
