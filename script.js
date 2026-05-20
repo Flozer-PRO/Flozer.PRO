@@ -37,17 +37,17 @@ for (let i = 0; i < petalCount; i++) {
     petals.push({
         distance: 60, 
         radius: 10,
-        color: '#ffffff'
+        baseColor: '#ffffff', // Обычный цвет лепестка
+        currentColor: '#ffffff', // Текущий цвет (может меняться на красный)
+        damageTimer: 0 // Таймер для эффекта урона
     });
 }
 
 // --- СЛУШАТЕЛИ КНОПОК МЫШИ ---
 window.addEventListener('mousedown', (event) => {
     if (event.button === 0) {
-        // ЛКМ — ЗЛИТСЯ
         player.emotion = 'angry';
     } else if (event.button === 2) {
-        // ПКМ — ГРУСТИТ
         player.emotion = 'sad';
     }
 });
@@ -94,9 +94,9 @@ function gameLoop() {
     let targetDistance = 60; 
 
     if (player.emotion === 'sad') {
-        targetDistance = 40; // Лепестки ближе при ПКМ (грусть)
+        targetDistance = 40; 
     } else if (player.emotion === 'angry') {
-        targetDistance = 110; // Лепестки дальше при ЛКМ (злость)
+        targetDistance = 110; 
     } else {
         targetDistance = 60; 
     }
@@ -114,14 +114,13 @@ function gameLoop() {
     let eyeY = player.y - 4;
 
     if (player.emotion === 'angry') {
-        // --- ЗЛЫЕ ГЛАЗА И РОТИК ДУГОЙ ВНИЗ ---
+        // --- ЗЛЫЕ ГЛАЗА И РОТИК ---
         ctx.fillStyle = '#000000'; 
         ctx.beginPath();
         ctx.ellipse(leftEyeX, eyeY, 5, 7, -Math.PI / 6, 0, Math.PI * 2);
         ctx.ellipse(rightEyeX, eyeY, 5, 7, Math.PI / 6, 0, Math.PI * 2);
         ctx.fill();
 
-        // Сердитые брови
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 3;
         ctx.beginPath();
@@ -135,7 +134,6 @@ function gameLoop() {
         ctx.arc(rightEyeX - 1, eyeY + 1, 2, 0, Math.PI * 2);
         ctx.fill();
 
-        // Рот дугой вниз (как у грустного)
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 3;
         ctx.beginPath();
@@ -150,7 +148,6 @@ function gameLoop() {
         ctx.ellipse(rightEyeX, eyeY, 6, 7, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Грустные брови
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -164,7 +161,6 @@ function gameLoop() {
         ctx.arc(rightEyeX + 1, eyeY + 2, 2.5, 0, Math.PI * 2);
         ctx.fill();
 
-        // Чёрный грустный ротик (дуга вниз)
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 3;
         ctx.beginPath();
@@ -176,7 +172,7 @@ function gameLoop() {
         ctx.fillStyle = '#000000'; 
         ctx.beginPath();
         ctx.ellipse(leftEyeX, eyeY, 6, 8, 0, 0, Math.PI * 2);
-        ctx.ellipse(rightEyeX, eyeY, 6, 8, 0, 0, Math.PI * 2);
+        ctx.ellipse(rightEyeX, eyeY, 8, 8, 0, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.fillStyle = '#ffffff'; 
@@ -185,7 +181,6 @@ function gameLoop() {
         ctx.arc(rightEyeX, eyeY, 3, 0, Math.PI * 2);
         ctx.fill();
 
-        // Чёрный весёлый ротик
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 3;
         ctx.beginPath();
@@ -199,18 +194,32 @@ function gameLoop() {
     petals.forEach((petal, index) => {
         petal.distance += (targetDistance - petal.distance) * 0.1;
 
+        // Если таймер урона активен, уменьшаем его и красим лепесток в красный
+        if (petal.damageTimer > 0) {
+            petal.damageTimer--;
+            petal.currentColor = '#ff3333'; // Красный цвет вспышки урона
+        } else {
+            petal.currentColor = petal.baseColor; // Возвращаем белый цвет
+        }
+
         let angle = currentAngle + (index * (Math.PI * 2 / petalCount));
         let petalX = player.x + Math.cos(angle) * petal.distance;
         let petalY = player.y + Math.sin(angle) * petal.distance;
 
         ctx.beginPath();
         ctx.arc(petalX, petalY, petal.radius, 0, Math.PI * 2);
-        ctx.fillStyle = petal.color;
+        ctx.fillStyle = petal.currentColor; // Рисуем текущим цветом
         ctx.fill();
         ctx.closePath();
 
         mobs.forEach((mob, mobIndex) => {
             if (checkCollision({ x: petalX, y: petalY, radius: petal.radius }, mob)) {
+                
+                // Включаем анимацию урона для лепестка на 10 кадров
+                if (petal.damageTimer === 0) {
+                    petal.damageTimer = 10;
+                }
+
                 mob.hp -= 1;
                 mob.x += Math.cos(angle) * 15;
                 mob.y += Math.sin(angle) * 15;
