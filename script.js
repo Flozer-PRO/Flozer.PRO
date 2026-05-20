@@ -15,9 +15,9 @@ const player = {
     x: canvas.width / 2,
     y: canvas.height / 2,
     radius: 25,
-    color: '#ffcc00', // Наш жёлтый цветок
+    color: '#ffcc00', // Жёлтый цвет
     speed: 0.08,
-    emotion: 'normal' // normal, angry, sad
+    emotion: 'normal'
 };
 
 const mouse = { x: canvas.width / 2, y: canvas.height / 2 };
@@ -27,7 +27,7 @@ window.addEventListener('mousemove', (event) => {
     mouse.y = event.clientY;
 });
 
-// Настройка лепестков (белые)
+// Настройка лепестков
 const petals = [];
 const petalCount = 5;
 const rotationSpeed = 0.03;
@@ -41,12 +41,14 @@ for (let i = 0; i < petalCount; i++) {
     });
 }
 
-// --- СЛУШАТЕЛИ КНОПОК МЫШИ ---
+// --- СЛУШАТЕЛИ КНОПОК МЫШИ (ПОМЕНЯЛИ НАОБОРОТ) ---
 window.addEventListener('mousedown', (event) => {
     if (event.button === 0) {
-        player.emotion = 'angry';
-    } else if (event.button === 2) {
+        // ЛКМ теперь — ГРУСТИТ
         player.emotion = 'sad';
+    } else if (event.button === 2) {
+        // ПКМ теперь — ЗЛИТСЯ
+        player.emotion = 'angry';
     }
 });
 
@@ -67,7 +69,7 @@ function spawnMob() {
             x: Math.random() * (canvas.width - 40) + 20,
             y: Math.random() * (canvas.height - 40) + 20,
             size: 30,
-            color: '#ff3333', // Красные мобы
+            color: '#ff3333',
             hp: 3
         });
     }
@@ -92,40 +94,33 @@ function gameLoop() {
     let targetDistance = 60; 
 
     if (player.emotion === 'sad') {
-        targetDistance = 40;      
+        targetDistance = 40; // Лепестки ближе при ЛКМ (грусть)
     } else if (player.emotion === 'angry') {
-        targetDistance = 110;     
+        targetDistance = 110; // Лепестки дальше при ПКМ (злость)
     } else {
-        targetDistance = 60;      
+        targetDistance = 60; 
     }
 
-    // Рисуем тело игрока (Жёлтый круг)
+    // Рисуем тело игрока
     ctx.beginPath();
     ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
     ctx.fillStyle = player.color;
     ctx.fill();
     ctx.closePath();
 
-    // --- РИСУЕМ ХОРНЕКС-ГЛАЗА (ЧЁРНО-БЕЛЫЕ) ---
-    
-    // Координаты левого и правого глаза относительно центра цветка
+    // Координаты лица
     let leftEyeX = player.x - 8;
     let rightEyeX = player.x + 8;
     let eyeY = player.y - 4;
 
     if (player.emotion === 'angry') {
-        // ЗЛЫЕ ГЛАЗА
-        // Левый глаз (белок)
+        // --- ЗЛЫЕ ГЛАЗА И РОТИК ---
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
         ctx.ellipse(leftEyeX, eyeY, 5, 7, -Math.PI / 6, 0, Math.PI * 2);
-        ctx.fill();
-        // Правый глаз (белок)
-        ctx.beginPath();
         ctx.ellipse(rightEyeX, eyeY, 5, 7, Math.PI / 6, 0, Math.PI * 2);
         ctx.fill();
 
-        // Сердитые брови поверх глаз
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 3;
         ctx.beginPath();
@@ -133,23 +128,28 @@ function gameLoop() {
         ctx.moveTo(player.x + 14, player.y - 12); ctx.lineTo(player.x + 2, player.y - 6);
         ctx.stroke();
 
-        // Чёрные зрачки (сдвинуты к центру, сужены)
         ctx.fillStyle = '#000000';
         ctx.beginPath();
         ctx.arc(leftEyeX + 1, eyeY + 1, 2, 0, Math.PI * 2);
         ctx.arc(rightEyeX - 1, eyeY + 1, 2, 0, Math.PI * 2);
         ctx.fill();
 
+        // Чёрный злой ротик (оскал/полоска)
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(player.x - 8, player.y + 8);
+        ctx.lineTo(player.x + 8, player.y + 8);
+        ctx.stroke();
+
     } else if (player.emotion === 'sad') {
-        // ГРУСТНЫЕ ГЛАЗА
-        // Белки глаз
+        // --- ГРУСТНЫЕ ГЛАЗА И РОТИК ---
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
         ctx.ellipse(leftEyeX, eyeY, 6, 7, 0, 0, Math.PI * 2);
         ctx.ellipse(rightEyeX, eyeY, 6, 7, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Грустные домиком брови
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -157,28 +157,39 @@ function gameLoop() {
         ctx.moveTo(player.x + 13, player.y - 10); ctx.lineTo(player.x + 4, player.y - 13);
         ctx.stroke();
 
-        // Зрачки смотрят вниз и в разные стороны (эффект грусти)
         ctx.fillStyle = '#000000';
         ctx.beginPath();
         ctx.arc(leftEyeX - 1, eyeY + 2, 2.5, 0, Math.PI * 2);
         ctx.arc(rightEyeX + 1, eyeY + 2, 2.5, 0, Math.PI * 2);
         ctx.fill();
 
+        // Чёрный грустный ротик (дуга вниз)
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(player.x, player.y + 12, 6, Math.PI, 0, false);
+        ctx.stroke();
+
     } else {
-        // ОБЫЧНЫЕ МУЛЬТЯШНЫЕ ГЛАЗА (Hornex стиль)
-        // Белки глаз (овалы)
+        // --- ОБЫЧНЫЕ ГЛАЗА И РОТИК ---
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
         ctx.ellipse(leftEyeX, eyeY, 6, 8, 0, 0, Math.PI * 2);
         ctx.ellipse(rightEyeX, eyeY, 6, 8, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Чёрные зрачки по центру
         ctx.fillStyle = '#000000';
         ctx.beginPath();
         ctx.arc(leftEyeX, eyeY, 3, 0, Math.PI * 2);
         ctx.arc(rightEyeX, eyeY, 3, 0, Math.PI * 2);
         ctx.fill();
+
+        // Чёрный весёлый ротик (улыбка дугой вверх)
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(player.x, player.y + 6, 6, 0, Math.PI, false);
+        ctx.stroke();
     }
 
     // --- Отрисовка лепестков ---
