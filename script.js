@@ -1,102 +1,142 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+const scoreElement = document.getElementById('score');
 
-// Растягиваем канвас на весь экран браузера
-function resizeCanvas() {
+// РќР°СЃС‚СЂР°РёРІР°РµРј СЂР°Р·РјРµСЂ СЌРєСЂР°РЅР°
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+window.addEventListener('resize', () => {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-}
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
-
-// Объект игрока (Твой Flozer)
-const player = {
-    x: window.innerWidth / 2,
-    y: window.innerHeight / 2,
-    radius: 25,
-    color: '#3b82f6', // Синий цвет основы
-    angle: 0          // Текущий угол поворота лепестков
-};
-
-// Список твоих лепестков (базовый набор)
-const petals = [
-    { color: '#ef4444', size: 10, distance: 65 }, // Красный (Урон)
-    { color: '#10b981', size: 10, distance: 65 }, // Зеленый (Здоровье)
-    { color: '#f59e0b', size: 10, distance: 65 }, // Желтый (Скорость)
-    { color: '#a855f7', size: 10, distance: 65 }  // Фиолетовый (Мистический)
-];
-
-// Плавное следование за мышкой (интерполяция)
-const mouse = { x: player.x, y: player.y };
-window.addEventListener('mousemove', (e) => {
-    mouse.x = e.clientX;
-    mouse.y = e.clientY;
 });
 
-// Главный игровой цикл (вызывается примерно 60 раз в секунду)
+// РџРµСЂРµРјРµРЅРЅС‹Рµ РґР»СЏ РёРіСЂРѕРєР°
+const player = {
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+    radius: 25,
+    color: '#0077ff',
+    speed: 0.08
+};
+
+// РџРµСЂРµРјРµРЅРЅС‹Рµ РґР»СЏ РјС‹С€Рё
+const mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+
+window.addEventListener('mousemove', (event) => {
+    mouse.x = event.clientX;
+    mouse.y = event.clientY;
+});
+
+// РќР°СЃС‚СЂРѕР№РєР° Р»РµРїРµСЃС‚РєРѕРІ
+const petals = [];
+const petalCount = 5;
+const rotationSpeed = 0.03;
+let currentAngle = 0;
+
+for (let i = 0; i < petalCount; i++) {
+    petals.push({
+        distance: 60, // Р”РёСЃС‚Р°РЅС†РёСЏ РѕС‚ РёРіСЂРѕРєР°
+        radius: 10,   // Р Р°Р·РјРµСЂ Р»РµРїРµСЃС‚РєР°
+        color: '#ff3366'
+    });
+}
+
+// РџРµСЂРµРјРµРЅРЅС‹Рµ РґР»СЏ РјРѕР±РѕРІ (Р¶РµР»С‚С‹Рµ РєРІР°РґСЂР°С‚С‹)
+const mobs = [];
+let score = 0;
+
+function spawnMob() {
+    if (mobs.length < 10) { // РњР°РєСЃРёРјСѓРј 10 РјРѕР±РѕРІ РЅР° СЌРєСЂР°РЅРµ РѕРґРЅРѕРІСЂРµРјРµРЅРЅРѕ
+        mobs.push({
+            x: Math.random() * (canvas.width - 40) + 20,
+            y: Math.random() * (canvas.height - 40) + 20,
+            size: 30,
+            color: '#ffcc00',
+            hp: 3 // РќСѓР¶РЅРѕ 3 СѓРґР°СЂР° Р»РµРїРµСЃС‚РєРѕРј, С‡С‚РѕР±С‹ СѓРЅРёС‡С‚РѕР¶РёС‚СЊ
+        });
+    }
+}
+
+// РЎРїР°РІРЅРёРј РјРѕР±Р° РєР°Р¶РґС‹Рµ 1.5 СЃРµРєСѓРЅРґС‹
+setInterval(spawnMob, 1500);
+
+// Р¤СѓРЅРєС†РёСЏ РїСЂРѕРІРµСЂРєРё СЃС‚РѕР»РєРЅРѕРІРµРЅРёСЏ РѕРєСЂСѓР¶РЅРѕСЃС‚Рё (Р»РµРїРµСЃС‚РєР°) Рё РєРІР°РґСЂР°С‚Р° (РјРѕР±Р°)
+function checkCollision(circle, rect) {
+    let closestX = Math.max(rect.x, Math.min(circle.x, rect.x + rect.size));
+    let closestY = Math.max(rect.y, Math.min(circle.y, rect.y + rect.size));
+    
+    let distanceX = circle.x - closestX;
+    let distanceY = circle.y - closestY;
+    
+    let distanceSquared = (distanceX * distanceX) + (distanceY * distanceY);
+    return distanceSquared < (circle.radius * circle.radius);
+}
+
+// Р“Р»Р°РІРЅС‹Р№ РёРіСЂРѕРІРѕР№ С†РёРєР»
 function gameLoop() {
-    // Очищаем экран перед каждым новым кадром
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Сетка на заднем фоне для ощущения движения
-    drawGrid();
+    // РџР»Р°РІРЅРѕРµ РґРІРёР¶РµРЅРёРµ РёРіСЂРѕРєР° Рє РјС‹С€РєРµ
+    player.x += (mouse.x - player.x) * player.speed;
+    player.y += (mouse.y - player.y) * player.speed;
 
-    // Плавное перемещение игрока к курсору мыши
-    player.x += (mouse.x - player.x) * 0.1;
-    player.y += (mouse.y - player.y) * 0.1;
-
-    // Рисуем центральный круг игрока
+    // Р РёСЃСѓРµРј РёРіСЂРѕРєР°
     ctx.beginPath();
     ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
     ctx.fillStyle = player.color;
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = player.color;
     ctx.fill();
     ctx.closePath();
-    ctx.shadowBlur = 0; // Сбрасываем свечение для других объектов
 
-    // Увеличиваем угол, чтобы лепестки крутились
-    player.angle += 0.025;
+    // Р’СЂР°С‰РµРЅРёРµ Р»РµРїРµСЃС‚РєРѕРІ
+    currentAngle += rotationSpeed;
 
-    // Рисуем лепестки вокруг игрока
+    // РџСЂРѕСЃС‡РµС‚ Рё РѕС‚СЂРёСЃРѕРІРєР° Р»РµРїРµСЃС‚РєРѕРІ
     petals.forEach((petal, index) => {
-        // Равномерно распределяем лепестки по кругу в зависимости от их количества
-        const petalAngle = player.angle + (index * (Math.PI * 2 / petals.length));
-        
-        // Математический расчет координат x и y для каждого лепестка
-        const petalX = player.x + petal.distance * Math.cos(petalAngle);
-        const petalY = player.y + petal.distance * Math.sin(petalAngle);
+        let angle = currentAngle + (index * (Math.PI * 2 / petalCount));
+        let petalX = player.x + Math.cos(angle) * petal.distance;
+        let petalY = player.y + Math.sin(angle) * petal.distance;
 
+        // Р РёСЃСѓРµРј Р»РµРїРµСЃС‚РѕРє
         ctx.beginPath();
-        ctx.arc(petalX, petalY, petal.size, 0, Math.PI * 2);
+        ctx.arc(petalX, petalY, petal.radius, 0, Math.PI * 2);
         ctx.fillStyle = petal.color;
         ctx.fill();
         ctx.closePath();
+
+        // РџСЂРѕРІРµСЂСЏРµРј СѓРґР°СЂ Р»РµРїРµСЃС‚РєР° РїРѕ РјРѕР±Р°Рј
+        mobs.forEach((mob, mobIndex) => {
+            if (checkCollision({ x: petalX, y: petalY, radius: petal.radius }, mob)) {
+                mob.hp -= 1; // РћС‚РЅРёРјР°РµРј Р·РґРѕСЂРѕРІСЊРµ Сѓ РјРѕР±Р°
+                
+                // РћС‚С‚Р°Р»РєРёРІР°РµРј РјРѕР±Р° С‡СѓС‚СЊ-С‡СѓС‚СЊ РїСЂРё СѓРґР°СЂРµ
+                mob.x += Math.cos(angle) * 10;
+                mob.y += Math.sin(angle) * 10;
+
+                // Р•СЃР»Рё Сѓ РјРѕР±Р° РєРѕРЅС‡РёР»РѕСЃСЊ HP, СѓРґР°Р»СЏРµРј РµРіРѕ
+                if (mob.hp <= 0) {
+                    mobs.splice(mobIndex, 1);
+                    score += 10;
+                    scoreElement.innerText = "РћС‡РєРё: " + score;
+                }
+            }
+        });
     });
 
-    // Запрашиваем следующий кадр анимации
+    // РћС‚СЂРёСЃРѕРІРєР° РјРѕР±РѕРІ
+    mobs.forEach((mob) => {
+        ctx.fillStyle = mob.color;
+        ctx.fillRect(mob.x, mob.y, mob.size, mob.size);
+        
+        // Р РёСЃСѓРµРј РїРѕР»РѕСЃРєСѓ Р·РґРѕСЂРѕРІСЊСЏ РЅР°Рґ РјРѕР±РѕРј
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(mob.x, mob.y - 10, mob.size, 4);
+        ctx.fillStyle = '#00ff00';
+        ctx.fillRect(mob.x, mob.y - 10, mob.size * (mob.hp / 3), 4);
+    });
+
     requestAnimationFrame(gameLoop);
 }
 
-// Функция для отрисовки фоновой сетки
-function drawGrid() {
-    ctx.strokeStyle = '#232323';
-    ctx.lineWidth = 1;
-    const gridSize = 50;
-
-    for (let x = 0; x < canvas.width; x += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
-        ctx.stroke();
-    }
-    for (let y = 0; y < canvas.height; y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
-    }
-}
-
-// Запускаем игру!
+// Р—Р°РїСѓСЃРє РёРіСЂС‹
 gameLoop();
