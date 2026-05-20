@@ -63,7 +63,7 @@ window.addEventListener('contextmenu', (event) => {
 const mobs = [];
 let score = 0;
 
-// Массивы названий для каждой цветовой группы
+// Массивы названий для каждойционной группы
 const greenTier = ['Common', 'Unusual', 'Rare'];
 const redTier = ['Epic', 'Legendary', 'Mythic'];
 const blackTier = ['Ultra', 'Super', 'Hyper'];
@@ -96,7 +96,8 @@ function spawnMob() {
             hp: mobType.maxHp,
             maxHp: mobType.maxHp,
             name: mobType.name,
-            points: mobType.points
+            points: mobType.points,
+            damageTimer: 0 // Таймер вспышки урона для конкретного моба
         });
     }
 }
@@ -111,27 +112,25 @@ function checkCollision(circle, rect) {
     return (distanceX * distanceX + distanceY * distanceY) < (circle.radius * circle.radius);
 }
 
-// УЛУЧШЕННЫЙ ДИНАМИЧЕСКИЙ ФОН (МЕНЯЕТ ЦВЕТ ОТ ОЧКОВ)
+// Улучшенный динамический фон
 function drawHornexGrid() {
-    let bgColor = '#142217';       // По умолчанию темный зелёный фон
+    let bgColor = '#142217';       
     let gridColor1 = 'rgba(46, 204, 113, 0.25)'; 
     let gridColor2 = 'rgba(46, 204, 113, 0.1)';
 
     if (score >= 100 && score < 300) {
-        bgColor = '#221414';       // Темный красный фон для Epic/Legendary стадии
+        bgColor = '#221414';       
         gridColor1 = 'rgba(231, 76, 60, 0.25)';
         gridColor2 = 'rgba(231, 76, 60, 0.1)';
     } else if (score >= 300) {
-        bgColor = '#0b0c10';       // Глубокий чёрный космический фон для Ultra стадии
+        bgColor = '#0b0c10';       
         gridColor1 = 'rgba(255, 255, 255, 0.2)';
-        gridColor2 = 'rgba(155, 89, 182, 0.15)'; // Фиолетово-белая сетка
+        gridColor2 = 'rgba(155, 89, 182, 0.15)'; 
     }
 
-    // Заливаем экран вычисленным цветом
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Рисуем адаптивную сетку
     ctx.lineWidth = 1;
     const gridSize = 50;
 
@@ -284,6 +283,11 @@ function gameLoop() {
                     petal.damageTimer = 10;
                 }
 
+                // Запускаем анимацию урона для МОБА (на 8 кадров)
+                if (mob.damageTimer === 0) {
+                    mob.damageTimer = 8;
+                }
+
                 mob.hp -= 1;
                 mob.x += Math.cos(angle) * 12;
                 mob.y += Math.sin(angle) * 12;
@@ -299,10 +303,17 @@ function gameLoop() {
 
     // Отрисовка мобов
     mobs.forEach((mob) => {
-        ctx.fillStyle = mob.color;
+        // Проверяем таймер урона моба: если активен, временно красим в белый цвет
+        if (mob.damageTimer > 0) {
+            mob.damageTimer--;
+            ctx.fillStyle = '#ffffff'; // Белая вспышка при ударе
+        } else {
+            ctx.fillStyle = mob.color; // Обычный цвет редкости
+        }
+        
         ctx.fillRect(mob.x, mob.y, mob.size, mob.size);
         
-        if (mob.strokeColor) {
+        if (mob.strokeColor && mob.damageTimer === 0) {
             ctx.strokeStyle = mob.strokeColor;
             ctx.lineWidth = 3;
             ctx.strokeRect(mob.x, mob.y, mob.size, mob.size);
