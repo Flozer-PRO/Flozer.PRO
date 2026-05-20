@@ -37,9 +37,9 @@ for (let i = 0; i < petalCount; i++) {
     petals.push({
         distance: 60, 
         radius: 10,
-        baseColor: '#ffffff', // Обычный цвет лепестка
-        currentColor: '#ffffff', // Текущий цвет (может меняться на красный)
-        damageTimer: 0 // Таймер для эффекта урона
+        baseColor: '#ffffff', 
+        currentColor: '#ffffff', 
+        damageTimer: 0 
     });
 }
 
@@ -168,11 +168,11 @@ function gameLoop() {
         ctx.stroke();
 
     } else {
-        // --- ОБЫЧНЫЕ ГЛАЗА И РОТИК ---
+        // --- ОБЫЧНЫЕ ГЛАЗА (ИСПРАВЛЕНО) И РОТИК ---
         ctx.fillStyle = '#000000'; 
         ctx.beginPath();
         ctx.ellipse(leftEyeX, eyeY, 6, 8, 0, 0, Math.PI * 2);
-        ctx.ellipse(rightEyeX, eyeY, 8, 8, 0, 0, Math.PI * 2);
+        ctx.ellipse(rightEyeX, eyeY, 6, 8, 0, 0, Math.PI * 2); // Теперь тут тоже 6 и 8, как у первого!
         ctx.fill();
 
         ctx.fillStyle = '#ffffff'; 
@@ -194,12 +194,11 @@ function gameLoop() {
     petals.forEach((petal, index) => {
         petal.distance += (targetDistance - petal.distance) * 0.1;
 
-        // Если таймер урона активен, уменьшаем его и красим лепесток в красный
         if (petal.damageTimer > 0) {
             petal.damageTimer--;
-            petal.currentColor = '#ff3333'; // Красный цвет вспышки урона
+            petal.currentColor = '#ff3333'; 
         } else {
-            petal.currentColor = petal.baseColor; // Возвращаем белый цвет
+            petal.currentColor = petal.baseColor; 
         }
 
         let angle = currentAngle + (index * (Math.PI * 2 / petalCount));
@@ -208,14 +207,12 @@ function gameLoop() {
 
         ctx.beginPath();
         ctx.arc(petalX, petalY, petal.radius, 0, Math.PI * 2);
-        ctx.fillStyle = petal.currentColor; // Рисуем текущим цветом
+        ctx.fillStyle = petal.currentColor; 
         ctx.fill();
         ctx.closePath();
 
         mobs.forEach((mob, mobIndex) => {
             if (checkCollision({ x: petalX, y: petalY, radius: petal.radius }, mob)) {
-                
-                // Включаем анимацию урона для лепестка на 10 кадров
                 if (petal.damageTimer === 0) {
                     petal.damageTimer = 10;
                 }
