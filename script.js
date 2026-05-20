@@ -10,13 +10,12 @@ window.addEventListener('resize', () => {
     canvas.height = window.innerHeight;
 });
 
-// Переменные для игрока
+// Переменные для игрока (Цвет теперь всегда жёлтый)
 const player = {
     x: canvas.width / 2,
     y: canvas.height / 2,
     radius: 25,
-    baseColor: '#0077ff', // Синий
-    color: '#0077ff',
+    color: '#ffcc00', // Всегда жёлтый цвет цветка
     speed: 0.08,
     emotion: 'normal' // normal, angry, sad
 };
@@ -28,18 +27,17 @@ window.addEventListener('mousemove', (event) => {
     mouse.y = event.clientY;
 });
 
-// Настройка лепестков
+// Настройка лепестков (Цвет изменён на белый)
 const petals = [];
 const petalCount = 5;
 const rotationSpeed = 0.03;
 let currentAngle = 0;
 
-// Базовые настройки лепестков
 for (let i = 0; i < petalCount; i++) {
     petals.push({
-        distance: 60, // Текущая дистанция (будет меняться)
+        distance: 60, 
         radius: 10,
-        color: '#ff3366'
+        color: '#ffffff' // Всегда белые лепестки
     });
 }
 
@@ -69,7 +67,7 @@ function spawnMob() {
             x: Math.random() * (canvas.width - 40) + 20,
             y: Math.random() * (canvas.height - 40) + 20,
             size: 30,
-            color: '#ffcc00',
+            color: '#ff3333', // Сделали мобов красными, чтобы они не сливались с жёлтым игроком
             hp: 3
         });
     }
@@ -91,45 +89,43 @@ function gameLoop() {
     player.x += (mouse.x - player.x) * player.speed;
     player.y += (mouse.y - player.y) * player.speed;
 
-    // Переменная для новой дистанции лепестков
+    // Дистанция меняется, но размер и цвет игрока теперь статичны
     let targetDistance = 60; 
 
-    // Проверяем эмоцию, меняем цвет тела и дистанцию лепестков
     if (player.emotion === 'sad') {
-        player.color = '#9933ff'; // Фиолетовый
-        targetDistance = 40;      // Сжимаются ближе, когда грустит
+        targetDistance = 40;      // Сжимаются ближе на ПКМ
     } else if (player.emotion === 'angry') {
-        player.color = '#ff3333'; // Красный
-        targetDistance = 110;     // Улетают дальше, когда злится
+        targetDistance = 110;     // Улетают дальше на ЛКМ
     } else {
-        player.color = player.baseColor; // Обычный синий
         targetDistance = 60;      // Обычное расстояние
     }
 
-    // Рисуем игрока
+    // Рисуем игрока (Размер всегда player.radius, без изменений)
     ctx.beginPath();
-    let currentRadius = player.emotion === 'sad' ? player.radius - 4 : player.radius;
-    ctx.arc(player.x, player.y, currentRadius, 0, Math.PI * 2);
+    ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
     ctx.fillStyle = player.color;
     ctx.fill();
     ctx.closePath();
 
-    // Рисуем глаза
+    // Рисуем чёрные глаза для хорошего контраста на жёлтом фоне
     if (player.emotion === 'angry') {
-        ctx.strokeStyle = 'white';
+        // Злые брови / глаза
+        ctx.strokeStyle = '#000000';
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(player.x - 12, player.y - 8); ctx.lineTo(player.x - 4, player.y - 2);
         ctx.moveTo(player.x + 12, player.y - 8); ctx.lineTo(player.x + 4, player.y - 2);
         ctx.stroke();
     } else if (player.emotion === 'sad') {
-        ctx.fillStyle = 'white';
+        // Грустные точки
+        ctx.fillStyle = '#000000';
         ctx.beginPath();
         ctx.arc(player.x - 8, player.y - 2, 3, 0, Math.PI * 2);
         ctx.arc(player.x + 8, player.y - 2, 3, 0, Math.PI * 2);
         ctx.fill();
     } else {
-        ctx.fillStyle = 'white';
+        // Обычные глаза
+        ctx.fillStyle = '#000000';
         ctx.beginPath();
         ctx.arc(player.x - 8, player.y - 5, 4, 0, Math.PI * 2);
         ctx.arc(player.x + 8, player.y - 5, 4, 0, Math.PI * 2);
@@ -140,7 +136,6 @@ function gameLoop() {
     currentAngle += rotationSpeed;
 
     petals.forEach((petal, index) => {
-        // Плавное изменение дистанции лепестков для красоты анимации
         petal.distance += (targetDistance - petal.distance) * 0.1;
 
         let angle = currentAngle + (index * (Math.PI * 2 / petalCount));
