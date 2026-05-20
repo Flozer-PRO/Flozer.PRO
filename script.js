@@ -41,7 +41,7 @@ for (let i = 0; i < petalCount; i++) {
     });
 }
 
-// --- СЛУШАТЕЛИ КНОПОК МЫШИ (ВЕРНУЛИ ОБРАТНО) ---
+// --- СЛУШАТЕЛИ КНОПОК МЫШИ ---
 window.addEventListener('mousedown', (event) => {
     if (event.button === 0) {
         // ЛКМ — ЗЛИТСЯ
@@ -114,8 +114,8 @@ function gameLoop() {
     let eyeY = player.y - 4;
 
     if (player.emotion === 'angry') {
-        // --- ЗЛЫЕ ГЛАЗА (ЧЁРНЫЕ С БЕЛЫМ ЗРАЧКОМ) И РОТИК ---
-        ctx.fillStyle = '#000000'; // Сначала чёрный большой овал
+        // --- ЗЛЫЕ ГЛАЗА И РОТИК ДУГОЙ ВНИЗ ---
+        ctx.fillStyle = '#000000'; 
         ctx.beginPath();
         ctx.ellipse(leftEyeX, eyeY, 5, 7, -Math.PI / 6, 0, Math.PI * 2);
         ctx.ellipse(rightEyeX, eyeY, 5, 7, Math.PI / 6, 0, Math.PI * 2);
@@ -129,23 +129,22 @@ function gameLoop() {
         ctx.moveTo(player.x + 14, player.y - 12); ctx.lineTo(player.x + 2, player.y - 6);
         ctx.stroke();
 
-        ctx.fillStyle = '#ffffff'; // Потом белый маленький зрачок
+        ctx.fillStyle = '#ffffff'; 
         ctx.beginPath();
         ctx.arc(leftEyeX + 1, eyeY + 1, 2, 0, Math.PI * 2);
         ctx.arc(rightEyeX - 1, eyeY + 1, 2, 0, Math.PI * 2);
         ctx.fill();
 
-        // Чёрный злой ротик
+        // Рот дугой вниз (как у грустного)
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.moveTo(player.x - 8, player.y + 8);
-        ctx.lineTo(player.x + 8, player.y + 8);
+        ctx.arc(player.x, player.y + 12, 6, Math.PI, 0, false);
         ctx.stroke();
 
     } else if (player.emotion === 'sad') {
-        // --- ГРУСТНЫЕ ГЛАЗА (ЧЁРНЫЕ С БЕЛЫМ ЗРАЧКОМ) И РОТИК ---
-        ctx.fillStyle = '#000000'; // Чёрный большой овал
+        // --- ГРУСТНЫЕ ГЛАЗА И РОТИК ---
+        ctx.fillStyle = '#000000'; 
         ctx.beginPath();
         ctx.ellipse(leftEyeX, eyeY, 6, 7, 0, 0, Math.PI * 2);
         ctx.ellipse(rightEyeX, eyeY, 6, 7, 0, 0, Math.PI * 2);
@@ -159,13 +158,13 @@ function gameLoop() {
         ctx.moveTo(player.x + 13, player.y - 10); ctx.lineTo(player.x + 4, player.y - 13);
         ctx.stroke();
 
-        ctx.fillStyle = '#ffffff'; // Белый маленький зрачок смотрит вниз
+        ctx.fillStyle = '#ffffff'; 
         ctx.beginPath();
         ctx.arc(leftEyeX - 1, eyeY + 2, 2.5, 0, Math.PI * 2);
         ctx.arc(rightEyeX + 1, eyeY + 2, 2.5, 0, Math.PI * 2);
         ctx.fill();
 
-        // Чёрный грустный ротик
+        // Чёрный грустный ротик (дуга вниз)
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 3;
         ctx.beginPath();
@@ -173,14 +172,14 @@ function gameLoop() {
         ctx.stroke();
 
     } else {
-        // --- ОБЫЧНЫЕ ГЛАЗА (ЧЁРНЫЕ С БЕЛЫМ ЗРАЧКОМ) И РОТИК ---
-        ctx.fillStyle = '#000000'; // Чёрный большой овал (Hornex стиль наоборот)
+        // --- ОБЫЧНЫЕ ГЛАЗА И РОТИК ---
+        ctx.fillStyle = '#000000'; 
         ctx.beginPath();
         ctx.ellipse(leftEyeX, eyeY, 6, 8, 0, 0, Math.PI * 2);
         ctx.ellipse(rightEyeX, eyeY, 6, 8, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.fillStyle = '#ffffff'; // Белый маленький зрачок
+        ctx.fillStyle = '#ffffff'; 
         ctx.beginPath();
         ctx.arc(leftEyeX, eyeY, 3, 0, Math.PI * 2);
         ctx.arc(rightEyeX, eyeY, 3, 0, Math.PI * 2);
