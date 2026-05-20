@@ -60,10 +60,11 @@ window.addEventListener('contextmenu', (event) => {
     event.preventDefault();
 });
 
-const mobs = [];
+// Изменили const на let, чтобы безопасно фильтровать убитых мобов
+let mobs = [];
 let score = 0;
 
-// Массивы названий для каждойционной группы
+// Массивы названий для каждой группы
 const greenTier = ['Common', 'Unusual', 'Rare'];
 const redTier = ['Epic', 'Legendary', 'Mythic'];
 const blackTier = ['Ultra', 'Super', 'Hyper'];
@@ -97,7 +98,8 @@ function spawnMob() {
             maxHp: mobType.maxHp,
             name: mobType.name,
             points: mobType.points,
-            damageTimer: 0 // Таймер вспышки урона для конкретного моба
+            damageTimer: 0,
+            isDead: false // Флаг для безопасного удаления
         });
     }
 }
@@ -277,13 +279,15 @@ function gameLoop() {
         ctx.fill();
         ctx.closePath();
 
-        mobs.forEach((mob, mobIndex) => {
+        // Проверяем столкновения
+        mobs.forEach((mob) => {
+            if (mob.isDead) return; // Игнорируем уже убитых в этом кадре
+
             if (checkCollision({ x: petalX, y: petalY, radius: petal.radius }, mob)) {
                 if (petal.damageTimer === 0) {
                     petal.damageTimer = 10;
                 }
 
-                // Запускаем анимацию урона для МОБА (на 8 кадров)
                 if (mob.damageTimer === 0) {
                     mob.damageTimer = 8;
                 }
@@ -293,22 +297,26 @@ function gameLoop() {
                 mob.y += Math.sin(angle) * 12;
 
                 if (mob.hp <= 0) {
+                    mob.isDead = true; // Просто помечаем труп!
                     score += mob.points;
-                    mobs.splice(mobIndex, 1);
-                    scoreElement.innerText = "Очки: " + score;
+                    if (scoreElement) {
+                        scoreElement.innerText = "Очки: " + score;
+                    }
                 }
             }
         });
     });
 
+    // БЕЗОПАСНАЯ ОЧИСТКА: Удаляем мертвых мобов только ПОСЛЕ всех проверок
+    mobs = mobs.filter(mob => !mob.isDead);
+
     // Отрисовка мобов
     mobs.forEach((mob) => {
-        // Проверяем таймер урона моба: если активен, временно красим в белый цвет
         if (mob.damageTimer > 0) {
             mob.damageTimer--;
-            ctx.fillStyle = '#ffffff'; // Белая вспышка при ударе
+            ctx.fillStyle = '#ffffff'; 
         } else {
-            ctx.fillStyle = mob.color; // Обычный цвет редкости
+            ctx.fillStyle = mob.color; 
         }
         
         ctx.fillRect(mob.x, mob.y, mob.size, mob.size);
