@@ -1,194 +1,338 @@
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const scoreElement = document.getElementById('score');
 
-// Настройка размеров экрана
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-window.addEventListener("resize", () => {
+window.addEventListener('resize', () => {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 });
 
-// Координаты мыши
-let mouse = { x: canvas.width / 2, y: canvas.height / 2 };
-window.addEventListener("mousemove", (e) => {
-    mouse.x = e.clientX;
-    mouse.y = e.clientY;
-});
-
-// Объект игрока
+// Переменные для игрока
 const player = {
     x: canvas.width / 2,
     y: canvas.height / 2,
-    radius: 30,
-    color: "#4CAF50", // Зеленый игрок
-    speed: 4,
-    maxHp: 100,
-    hp: 100,
-    isDead: false
+    radius: 25,
+    color: '#ffcc00', 
+    speed: 0.08,
+    emotion: 'normal'
 };
 
-// Настройки лепестков
+const mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+
+window.addEventListener('mousemove', (event) => {
+    mouse.x = event.clientX;
+    mouse.y = event.clientY;
+});
+
+// Настройка лепестков
 const petals = [];
-const petalCount = 3;
-const petalDistance = 60;
-const petalRadius = 12;
-let angle = 0;
+const petalCount = 5;
+const rotationSpeed = 0.03;
+let currentAngle = 0;
 
 for (let i = 0; i < petalCount; i++) {
-    petals.push({ id: i });
+    petals.push({
+        distance: 60, 
+        radius: 10,
+        baseColor: '#ffffff', 
+        currentColor: '#ffffff', 
+        damageTimer: 0 
+    });
 }
 
-// Массив мобов
-const enemies = [];
-const maxEnemies = 5;
+// --- СЛУШАТЕЛИ КНОПОК МЫШИ ---
+window.addEventListener('mousedown', (event) => {
+    if (event.button === 0) {
+        player.emotion = 'angry';
+    } else if (event.button === 2) {
+        player.emotion = 'sad';
+    }
+});
 
-function spawnEnemy() {
-    if (player.isDead) return;
-    
-    if (enemies.length < maxEnemies) {
-        let x, y;
-        if (Math.random() < 0.5) {
-            x = Math.random() < 0.5 ? -30 : canvas.width + 30;
-            y = Math.random() * canvas.height;
+window.addEventListener('mouseup', () => {
+    player.emotion = 'normal';
+});
+
+window.addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+});
+
+const mobs = [];
+let score = 0;
+
+// Массивы названий для каждойционной группы
+const greenTier = ['Common', 'Unusual', 'Rare'];
+const redTier = ['Epic', 'Legendary', 'Mythic'];
+const blackTier = ['Ultra', 'Super', 'Hyper'];
+
+function spawnMob() {
+    if (mobs.length < 10) {
+        const rand = Math.random();
+        let mobType;
+
+        if (rand < 0.55) {
+            // ЗЕЛЕНАЯ группа
+            const name = greenTier[Math.floor(Math.random() * greenTier.length)];
+            mobType = { name: name, size: 25, color: '#2ecc71', strokeColor: null, maxHp: 3, points: 10 };
+        } else if (rand < 0.90) {
+            // КРАСНАЯ группа
+            const name = redTier[Math.floor(Math.random() * redTier.length)];
+            mobType = { name: name, size: 40, color: '#e74c3c', strokeColor: null, maxHp: 7, points: 30 };
         } else {
-            x = Math.random() * canvas.width;
-            y = Math.random() < 0.5 ? -30 : canvas.height + 30;
+            // ЧЕРНАЯ группа
+            const name = blackTier[Math.floor(Math.random() * blackTier.length)];
+            mobType = { name: name, size: 60, color: '#111111', strokeColor: '#ffffff', maxHp: 20, points: 100 };
         }
-        
-        enemies.push({
-            x: x,
-            y: y,
-            radius: 20,
-            color: "#d32f2f", // Красные мобы
-            speed: 1.5
+
+        mobs.push({
+            x: Math.random() * (canvas.width - 70) + 35,
+            y: Math.random() * (canvas.height - 70) + 35,
+            size: mobType.size,
+            color: mobType.color,
+            strokeColor: mobType.strokeColor,
+            hp: mobType.maxHp,
+            maxHp: mobType.maxHp,
+            name: mobType.name,
+            points: mobType.points,
+            damageTimer: 0 // Таймер вспышки урона для конкретного моба
         });
     }
 }
 
-// Спавн мобов каждые 2 секунды
-setInterval(spawnEnemy, 2000);
+setInterval(spawnMob, 1200);
 
-// Функция перезапуска
-function resetGame() {
-    player.hp = player.maxHp;
-    player.x = canvas.width / 2;
-    player.y = canvas.height / 2;
-    enemies.length = 0; 
-    player.isDead = false;
-    requestAnimationFrame(gameLoop);
+function checkCollision(circle, rect) {
+    let closestX = Math.max(rect.x, Math.min(circle.x, rect.x + rect.size));
+    let closestY = Math.max(rect.y, Math.min(circle.y, rect.y + rect.size));
+    let distanceX = circle.x - closestX;
+    let distanceY = circle.y - closestY;
+    return (distanceX * distanceX + distanceY * distanceY) < (circle.radius * circle.radius);
 }
 
-// Главный игровой цикл
+// Улучшенный динамический фон
+function drawHornexGrid() {
+    let bgColor = '#142217';       
+    let gridColor1 = 'rgba(46, 204, 113, 0.25)'; 
+    let gridColor2 = 'rgba(46, 204, 113, 0.1)';
+
+    if (score >= 100 && score < 300) {
+        bgColor = '#221414';       
+        gridColor1 = 'rgba(231, 76, 60, 0.25)';
+        gridColor2 = 'rgba(231, 76, 60, 0.1)';
+    } else if (score >= 300) {
+        bgColor = '#0b0c10';       
+        gridColor1 = 'rgba(255, 255, 255, 0.2)';
+        gridColor2 = 'rgba(155, 89, 182, 0.15)'; 
+    }
+
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.lineWidth = 1;
+    const gridSize = 50;
+
+    for (let x = 0; x < canvas.width; x += gridSize) {
+        ctx.strokeStyle = (x % 100 === 0) ? gridColor1 : gridColor2;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+    }
+
+    for (let y = 0; y < canvas.height; y += gridSize) {
+        ctx.strokeStyle = (y % 100 === 0) ? gridColor1 : gridColor2;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+    }
+}
+
 function gameLoop() {
-    if (player.isDead) {
-        // Черный экран при смерти
-        ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        return;
+    drawHornexGrid();
+
+    player.x += (mouse.x - player.x) * player.speed;
+    player.y += (mouse.y - player.y) * player.speed;
+
+    let targetDistance = 60; 
+
+    if (player.emotion === 'sad') {
+        targetDistance = 40; 
+    } else if (player.emotion === 'angry') {
+        targetDistance = 110; 
+    } else {
+        targetDistance = 60; 
     }
 
-    // Очищаем экран (прозрачным, чтобы был виден зеленый фон из CSS)
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // 1. Движение игрока
-    const dx = mouse.x - player.x;
-    const dy = mouse.y - player.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-
-    if (dist > 5) {
-        player.x += (dx / dist) * player.speed;
-        player.y += (dy / dist) * player.speed;
-    }
-
-    // 2. Вращение лепестков
-    angle += 0.03;
-
-    // Отрисовка игрока
+    // Рисуем тело игрока
     ctx.beginPath();
     ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
     ctx.fillStyle = player.color;
     ctx.fill();
     ctx.closePath();
 
-    // Отрисовка лепестков
+    // Координаты лица
+    let leftEyeX = player.x - 8;
+    let rightEyeX = player.x + 8;
+    let eyeY = player.y - 4;
+
+    if (player.emotion === 'angry') {
+        // --- ЗЛЫЕ ГЛАЗА И РОТИК ---
+        ctx.fillStyle = '#000000'; 
+        ctx.beginPath();
+        ctx.ellipse(leftEyeX, eyeY, 5, 7, -Math.PI / 6, 0, Math.PI * 2);
+        ctx.ellipse(rightEyeX, eyeY, 5, 7, Math.PI / 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(player.x - 14, player.y - 12); ctx.lineTo(player.x - 2, player.y - 6);
+        ctx.moveTo(player.x + 14, player.y - 12); ctx.lineTo(player.x + 2, player.y - 6);
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff'; 
+        ctx.beginPath();
+        ctx.arc(leftEyeX + 1, eyeY + 1, 2, 0, Math.PI * 2);
+        ctx.arc(rightEyeX - 1, eyeY + 1, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(player.x, player.y + 12, 6, Math.PI, 0, false);
+        ctx.stroke();
+
+    } else if (player.emotion === 'sad') {
+        // --- ГРУСТНЫЕ ГЛАЗА И РОТИК ---
+        ctx.fillStyle = '#000000'; 
+        ctx.beginPath();
+        ctx.ellipse(leftEyeX, eyeY, 6, 7, 0, 0, Math.PI * 2);
+        ctx.ellipse(rightEyeX, eyeY, 6, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(player.x - 13, player.y - 10); ctx.lineTo(player.x - 4, player.y - 13);
+        ctx.moveTo(player.x + 13, player.y - 10); ctx.lineTo(player.x + 4, player.y - 13);
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff'; 
+        ctx.beginPath();
+        ctx.arc(leftEyeX - 1, eyeY + 2, 2.5, 0, Math.PI * 2);
+        ctx.arc(rightEyeX + 1, eyeY + 2, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(player.x, player.y + 12, 6, Math.PI, 0, false);
+        ctx.stroke();
+
+    } else {
+        // --- ОБЫЧНЫЕ ГЛАЗА И РОТИК ---
+        ctx.fillStyle = '#000000'; 
+        ctx.beginPath();
+        ctx.ellipse(leftEyeX, eyeY, 6, 8, 0, 0, Math.PI * 2);
+        ctx.ellipse(rightEyeX, eyeY, 6, 8, 0, 0, Math.PI * 2); 
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff'; 
+        ctx.beginPath();
+        ctx.arc(leftEyeX, eyeY, 3, 0, Math.PI * 2);
+        ctx.arc(rightEyeX, eyeY, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(player.x, player.y + 6, 6, 0, Math.PI, false);
+        ctx.stroke();
+    }
+
+    // --- Отрисовка лепестков ---
+    currentAngle += rotationSpeed;
+
     petals.forEach((petal, index) => {
-        const petalAngle = angle + (index * (Math.PI * 2 / petalCount));
-        const pX = player.x + Math.cos(petalAngle) * petalDistance;
-        const pY = player.y + Math.sin(petalAngle) * petalDistance;
+        petal.distance += (targetDistance - petal.distance) * 0.1;
+
+        if (petal.damageTimer > 0) {
+            petal.damageTimer--;
+            petal.currentColor = '#ff3333'; 
+        } else {
+            petal.currentColor = petal.baseColor; 
+        }
+
+        let angle = currentAngle + (index * (Math.PI * 2 / petalCount));
+        let petalX = player.x + Math.cos(angle) * petal.distance;
+        let petalY = player.y + Math.sin(angle) * petal.distance;
 
         ctx.beginPath();
-        ctx.arc(pX, pY, petalRadius, 0, Math.PI * 2);
-        ctx.fillStyle = "#FFEB3B"; // Желтые лепестки
+        ctx.arc(petalX, petalY, petal.radius, 0, Math.PI * 2);
+        ctx.fillStyle = petal.currentColor; 
         ctx.fill();
         ctx.closePath();
 
-        // Столкновение лепестка с мобами
-        for (let i = enemies.length - 1; i >= 0; i--) {
-            const enemy = enemies[i];
-            const eDx = pX - enemy.x;
-            const eDy = pY - enemy.y;
-            const eDist = Math.sqrt(eDx * eDx + eDy * eDy);
+        mobs.forEach((mob, mobIndex) => {
+            if (checkCollision({ x: petalX, y: petalY, radius: petal.radius }, mob)) {
+                if (petal.damageTimer === 0) {
+                    petal.damageTimer = 10;
+                }
 
-            if (eDist < petalRadius + enemy.radius) {
-                enemies.splice(i, 1);
+                // Запускаем анимацию урона для МОБА (на 8 кадров)
+                if (mob.damageTimer === 0) {
+                    mob.damageTimer = 8;
+                }
+
+                mob.hp -= 1;
+                mob.x += Math.cos(angle) * 12;
+                mob.y += Math.sin(angle) * 12;
+
+                if (mob.hp <= 0) {
+                    score += mob.points;
+                    mobs.splice(mobIndex, 1);
+                    scoreElement.innerText = "Очки: " + score;
+                }
             }
-        }
+        });
     });
 
-    // 3. Движение мобов + урон
-    for (let i = enemies.length - 1; i >= 0; i--) {
-        const enemy = enemies[i];
-
-        const enDx = player.x - enemy.x;
-        const enDy = player.y - enemy.y;
-        const enDist = Math.sqrt(enDx * enDx + enDy * enDy);
-
-        if (enDist > 1) {
-            enemy.x += (enDx / enDist) * enemy.speed;
-            enemy.y += (enDy / enDist) * enemy.speed;
+    // Отрисовка мобов
+    mobs.forEach((mob) => {
+        // Проверяем таймер урона моба: если активен, временно красим в белый цвет
+        if (mob.damageTimer > 0) {
+            mob.damageTimer--;
+            ctx.fillStyle = '#ffffff'; // Белая вспышка при ударе
+        } else {
+            ctx.fillStyle = mob.color; // Обычный цвет редкости
         }
-
-        // Рисуем круглого красного моба
-        ctx.beginPath();
-        ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
-        ctx.fillStyle = enemy.color;
-        ctx.fill();
-        ctx.closePath();
-
-        // Проверка урона
-        if (enDist < player.radius + enemy.radius) {
-            player.hp -= 0.5;
-            
-            if (player.hp <= 0) {
-                player.isDead = true;
-                setTimeout(() => {
-                    alert("Игра окончена! Вы погибли.");
-                    resetGame();
-                }, 10);
-                return;
-            }
+        
+        ctx.fillRect(mob.x, mob.y, mob.size, mob.size);
+        
+        if (mob.strokeColor && mob.damageTimer === 0) {
+            ctx.strokeStyle = mob.strokeColor;
+            ctx.lineWidth = 3;
+            ctx.strokeRect(mob.x, mob.y, mob.size, mob.size);
         }
-    }
+        
+        // Рисуем текст редкости
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '10px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(mob.name, mob.x + mob.size / 2, mob.y - 16);
 
-    // 4. Красная полоска здоровья над игроком
-    const barWidth = 60;
-    const barHeight = 8;
-    const barX = player.x - barWidth / 2;
-    const barY = player.y - player.radius - 15;
-
-    ctx.fillStyle = "#550000"; // Темно-красный фон полоски
-    ctx.fillRect(barX, barY, barWidth, barHeight);
-
-    const currentBarWidth = (player.hp / player.maxHp) * barWidth;
-    if (currentBarWidth > 0) {
-        ctx.fillStyle = "#FF2222"; // Ярко-красное здоровье (или можно поставить #00FF00 для зеленого)
-        ctx.fillRect(barX, barY, currentBarWidth, barHeight);
-    }
+        // Полоска здоровья
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(mob.x, mob.y - 10, mob.size, 4);
+        ctx.fillStyle = '#00ff00';
+        ctx.fillRect(mob.x, mob.y - 10, mob.size * (mob.hp / mob.maxHp), 4);
+    });
 
     requestAnimationFrame(gameLoop);
 }
 
-// Запуск
 gameLoop();
