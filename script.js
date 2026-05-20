@@ -74,17 +74,16 @@ function spawnMob() {
         let mobType;
 
         if (rand < 0.55) {
-            // 55% шанс — ЗЕЛЕНАЯ группа (Common, Unusual, Rare)
+            // ЗЕЛЕНАЯ группа
             const name = greenTier[Math.floor(Math.random() * greenTier.length)];
             mobType = { name: name, size: 25, color: '#2ecc71', strokeColor: null, maxHp: 3, points: 10 };
         } else if (rand < 0.90) {
-            // 35% шанс — КРАСНАЯ группа (Epic, Legendary, Mythic)
+            // КРАСНАЯ группа
             const name = redTier[Math.floor(Math.random() * redTier.length)];
             mobType = { name: name, size: 40, color: '#e74c3c', strokeColor: null, maxHp: 7, points: 30 };
         } else {
-            // 10% шанс — ЧЕРНАЯ группа (Ultra, Super, Hyper)
+            // ЧЕРНАЯ группа
             const name = blackTier[Math.floor(Math.random() * blackTier.length)];
-            // Чёрный моб с неоновой белой/фиолетовой обводкой, чтобы не сливался с фоном
             mobType = { name: name, size: 60, color: '#111111', strokeColor: '#ffffff', maxHp: 20, points: 100 };
         }
 
@@ -112,16 +111,32 @@ function checkCollision(circle, rect) {
     return (distanceX * distanceX + distanceY * distanceY) < (circle.radius * circle.radius);
 }
 
-// Фон Hornex
+// УЛУЧШЕННЫЙ ДИНАМИЧЕСКИЙ ФОН (МЕНЯЕТ ЦВЕТ ОТ ОЧКОВ)
 function drawHornexGrid() {
-    ctx.fillStyle = '#161a1d';
+    let bgColor = '#142217';       // По умолчанию темный зелёный фон
+    let gridColor1 = 'rgba(46, 204, 113, 0.25)'; 
+    let gridColor2 = 'rgba(46, 204, 113, 0.1)';
+
+    if (score >= 100 && score < 300) {
+        bgColor = '#221414';       // Темный красный фон для Epic/Legendary стадии
+        gridColor1 = 'rgba(231, 76, 60, 0.25)';
+        gridColor2 = 'rgba(231, 76, 60, 0.1)';
+    } else if (score >= 300) {
+        bgColor = '#0b0c10';       // Глубокий чёрный космический фон для Ultra стадии
+        gridColor1 = 'rgba(255, 255, 255, 0.2)';
+        gridColor2 = 'rgba(155, 89, 182, 0.15)'; // Фиолетово-белая сетка
+    }
+
+    // Заливаем экран вычисленным цветом
+    ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    // Рисуем адаптивную сетку
     ctx.lineWidth = 1;
     const gridSize = 50;
 
     for (let x = 0; x < canvas.width; x += gridSize) {
-        ctx.strokeStyle = (x % 100 === 0) ? 'rgba(46, 204, 113, 0.15)' : 'rgba(231, 76, 60, 0.1)';
+        ctx.strokeStyle = (x % 100 === 0) ? gridColor1 : gridColor2;
         ctx.beginPath();
         ctx.moveTo(x, 0);
         ctx.lineTo(x, canvas.height);
@@ -129,7 +144,7 @@ function drawHornexGrid() {
     }
 
     for (let y = 0; y < canvas.height; y += gridSize) {
-        ctx.strokeStyle = (y % 100 === 0) ? 'rgba(46, 204, 113, 0.15)' : 'rgba(231, 76, 60, 0.1)';
+        ctx.strokeStyle = (y % 100 === 0) ? gridColor1 : gridColor2;
         ctx.beginPath();
         ctx.moveTo(0, y);
         ctx.lineTo(canvas.width, y);
@@ -293,7 +308,7 @@ function gameLoop() {
             ctx.strokeRect(mob.x, mob.y, mob.size, mob.size);
         }
         
-        // РИСУЕМ ТЕКСТ РЕДКОСТИ НАД МОБОМ
+        // Рисуем текст редкости
         ctx.fillStyle = '#ffffff';
         ctx.font = '10px Arial';
         ctx.textAlign = 'center';
