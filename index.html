@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>flozer.PRO — Новая арена лепестков</title>
+    <style>
+        /* Убираем отступы и скроллбары, чтобы игра была на весь экран */
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #141414;
+            font-family: sans-serif;
+        }
+        canvas {
+            display: block;
+        }
+        /* Простой интерфейс поверх игры */
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #ffffff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            pointer-events: none; /* Чтобы мышка кликала сквозь текст */
+        }
+        h1 { margin: 0; font-size: 24px; color: #4ade80; tracking-wide; }
+    </style>
+</head>
+<body>
+
+    <div id="ui">
+        <h1>FLOZER.PRO</h1>
+        <p>Управление: Движение мыши</p>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script src="script.js"></script>
+</body>
+</html>
