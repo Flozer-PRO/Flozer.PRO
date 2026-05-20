@@ -41,14 +41,14 @@ for (let i = 0; i < petalCount; i++) {
     });
 }
 
-// --- СЛУШАТЕЛИ КНОПОК МЫШИ (ПОМЕНЯЛИ НАОБОРОТ) ---
+// --- СЛУШАТЕЛИ КНОПОК МЫШИ (ВЕРНУЛИ ОБРАТНО) ---
 window.addEventListener('mousedown', (event) => {
     if (event.button === 0) {
-        // ЛКМ теперь — ГРУСТИТ
-        player.emotion = 'sad';
-    } else if (event.button === 2) {
-        // ПКМ теперь — ЗЛИТСЯ
+        // ЛКМ — ЗЛИТСЯ
         player.emotion = 'angry';
+    } else if (event.button === 2) {
+        // ПКМ — ГРУСТИТ
+        player.emotion = 'sad';
     }
 });
 
@@ -94,9 +94,9 @@ function gameLoop() {
     let targetDistance = 60; 
 
     if (player.emotion === 'sad') {
-        targetDistance = 40; // Лепестки ближе при ЛКМ (грусть)
+        targetDistance = 40; // Лепестки ближе при ПКМ (грусть)
     } else if (player.emotion === 'angry') {
-        targetDistance = 110; // Лепестки дальше при ПКМ (злость)
+        targetDistance = 110; // Лепестки дальше при ЛКМ (злость)
     } else {
         targetDistance = 60; 
     }
@@ -114,13 +114,14 @@ function gameLoop() {
     let eyeY = player.y - 4;
 
     if (player.emotion === 'angry') {
-        // --- ЗЛЫЕ ГЛАЗА И РОТИК ---
-        ctx.fillStyle = '#ffffff';
+        // --- ЗЛЫЕ ГЛАЗА (ЧЁРНЫЕ С БЕЛЫМ ЗРАЧКОМ) И РОТИК ---
+        ctx.fillStyle = '#000000'; // Сначала чёрный большой овал
         ctx.beginPath();
         ctx.ellipse(leftEyeX, eyeY, 5, 7, -Math.PI / 6, 0, Math.PI * 2);
         ctx.ellipse(rightEyeX, eyeY, 5, 7, Math.PI / 6, 0, Math.PI * 2);
         ctx.fill();
 
+        // Сердитые брови
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 3;
         ctx.beginPath();
@@ -128,13 +129,13 @@ function gameLoop() {
         ctx.moveTo(player.x + 14, player.y - 12); ctx.lineTo(player.x + 2, player.y - 6);
         ctx.stroke();
 
-        ctx.fillStyle = '#000000';
+        ctx.fillStyle = '#ffffff'; // Потом белый маленький зрачок
         ctx.beginPath();
         ctx.arc(leftEyeX + 1, eyeY + 1, 2, 0, Math.PI * 2);
         ctx.arc(rightEyeX - 1, eyeY + 1, 2, 0, Math.PI * 2);
         ctx.fill();
 
-        // Чёрный злой ротик (оскал/полоска)
+        // Чёрный злой ротик
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 3;
         ctx.beginPath();
@@ -143,13 +144,14 @@ function gameLoop() {
         ctx.stroke();
 
     } else if (player.emotion === 'sad') {
-        // --- ГРУСТНЫЕ ГЛАЗА И РОТИК ---
-        ctx.fillStyle = '#ffffff';
+        // --- ГРУСТНЫЕ ГЛАЗА (ЧЁРНЫЕ С БЕЛЫМ ЗРАЧКОМ) И РОТИК ---
+        ctx.fillStyle = '#000000'; // Чёрный большой овал
         ctx.beginPath();
         ctx.ellipse(leftEyeX, eyeY, 6, 7, 0, 0, Math.PI * 2);
         ctx.ellipse(rightEyeX, eyeY, 6, 7, 0, 0, Math.PI * 2);
         ctx.fill();
 
+        // Грустные брови
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -157,13 +159,13 @@ function gameLoop() {
         ctx.moveTo(player.x + 13, player.y - 10); ctx.lineTo(player.x + 4, player.y - 13);
         ctx.stroke();
 
-        ctx.fillStyle = '#000000';
+        ctx.fillStyle = '#ffffff'; // Белый маленький зрачок смотрит вниз
         ctx.beginPath();
         ctx.arc(leftEyeX - 1, eyeY + 2, 2.5, 0, Math.PI * 2);
         ctx.arc(rightEyeX + 1, eyeY + 2, 2.5, 0, Math.PI * 2);
         ctx.fill();
 
-        // Чёрный грустный ротик (дуга вниз)
+        // Чёрный грустный ротик
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 3;
         ctx.beginPath();
@@ -171,20 +173,20 @@ function gameLoop() {
         ctx.stroke();
 
     } else {
-        // --- ОБЫЧНЫЕ ГЛАЗА И РОТИК ---
-        ctx.fillStyle = '#ffffff';
+        // --- ОБЫЧНЫЕ ГЛАЗА (ЧЁРНЫЕ С БЕЛЫМ ЗРАЧКОМ) И РОТИК ---
+        ctx.fillStyle = '#000000'; // Чёрный большой овал (Hornex стиль наоборот)
         ctx.beginPath();
         ctx.ellipse(leftEyeX, eyeY, 6, 8, 0, 0, Math.PI * 2);
         ctx.ellipse(rightEyeX, eyeY, 6, 8, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.fillStyle = '#000000';
+        ctx.fillStyle = '#ffffff'; // Белый маленький зрачок
         ctx.beginPath();
         ctx.arc(leftEyeX, eyeY, 3, 0, Math.PI * 2);
         ctx.arc(rightEyeX, eyeY, 3, 0, Math.PI * 2);
         ctx.fill();
 
-        // Чёрный весёлый ротик (улыбка дугой вверх)
+        // Чёрный весёлый ротик
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 3;
         ctx.beginPath();
