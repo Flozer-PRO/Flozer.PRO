@@ -14,6 +14,7 @@ window.addEventListener('resize', resizeCanvas);
 document.body.style.margin = "0";
 document.body.style.overflow = "hidden";
 document.body.style.background = "#111";
+document.body.style.userSelect = "none";
 
 // Создаем интерфейс для очков
 const scoreElement = document.createElement('div');
@@ -65,40 +66,81 @@ for (let i = 0; i < petalCount; i++) {
     });
 }
 
-// --- ФУНКЦИЯ ОТРЫСОВКИ ЛИЦА HORNEX ---
+// --- ФУНКЦИЯ КРАСИВОЙ ОТРИСОВКИ ЛИЦА HORNEX ---
 function drawHornexFace(x, y, radius, emotion) {
-    ctx.fillStyle = '#000';
-    
-    // Глаза базовые
-    let eyeOffset = radius * 0.35;
-    let eyeRadius = radius * 0.15;
-    
-    // Смещение глаз в сторону мышки для эффекта взгляда
     const angle = Math.atan2(mouse.y - y, mouse.x - x);
-    const lookDist = radius * 0.1;
-    const lookX = Math.cos(angle) * lookDist;
-    const lookY = Math.sin(angle) * lookDist;
+    
+    // Параметры глаз (левый и правый)
+    const eyeOffsetX = radius * 0.35;
+    const eyeOffsetY = radius * 0.15;
+    const eyeRadius = radius * 0.22; // Размер белка
+    const pupilRadius = radius * 0.1; // Размер зрачка
 
-    // Левый и правый глаз
-    ctx.beginPath();
-    ctx.arc(x - eyeOffset + lookX, y - eyeOffset + lookY, eyeRadius, 0, Math.PI * 2);
-    ctx.arc(x + eyeOffset + lookX, y - eyeOffset + lookY, eyeRadius, 0, Math.PI * 2);
-    ctx.fill();
+    const eyes = [
+        { cx: x - eyeOffsetX, cy: y - eyeOffsetY }, // Левый
+        { cx: x + eyeOffsetX, cy: y - eyeOffsetY }  // Правый
+    ];
 
-    // Рот в зависимости от эмоции
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 3;
+    eyes.forEach(eye => {
+        // 1. Рисуем белок глаза
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(eye.cx, eye.cy, eyeRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // 2. Рассчитываем смещение зрачка в сторону мыши (внутри белка)
+        const maxPupilOffset = eyeRadius - pupilRadius - 1;
+        const pupilX = eye.cx + Math.cos(angle) * maxPupilOffset;
+        const pupilY = eye.cy + Math.sin(angle) * maxPupilOffset;
+
+        // 3. Рисуем зрачок
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(pupilX, pupilY, pupilRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 4. Маленький блик в зрачке для живости
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(pupilX - pupilRadius * 0.3, pupilY - pupilRadius * 0.3, pupilRadius * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    // --- РИСОВАНИЕ РТА ---
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 3.5;
+    ctx.lineCap = 'round';
     ctx.beginPath();
+
     if (emotion === 'angry') {
-        // Злой рот (дуга вверх)
-        ctx.arc(x, y + radius * 0.4, radius * 0.2, Math.PI, 0, false);
+        // Злой рот (дуга краями вниз, открытый или агрессивный)
+        ctx.arc(x, y + radius * 0.45, radius * 0.25, Math.PI * 1.2, Math.PI * 1.8, false);
+        
+        // Дорисуем грозные брови над глазами
+        ctx.fillStyle = '#000000';
+        // Левая бровь
+        ctx.save();
+        ctx.translate(x - eyeOffsetX, y - eyeOffsetY - eyeRadius - 2);
+        ctx.rotate(0.2);
+        ctx.fillRect(-eyeRadius, -2, eyeRadius * 2, 4);
+        ctx.restore();
+        // Правая бровь
+        ctx.save();
+        ctx.translate(x + eyeOffsetX, y - eyeOffsetY - eyeRadius - 2);
+        ctx.rotate(-0.2);
+        ctx.fillRect(-eyeRadius, -2, eyeRadius * 2, 4);
+        ctx.restore();
+        
     } else if (emotion === 'happy') {
-        // Улыбка
-        ctx.arc(x, y + radius * 0.2, radius * 0.3, 0, Math.PI, false);
+        // Довольная широкая улыбка
+        ctx.arc(x, y + radius * 0.15, radius * 0.35, 0.1 * Math.PI, 0.9 * Math.PI, false);
     } else {
-        // Нейтральный рот (полоска)
-        ctx.moveTo(x - radius * 0.2, y + radius * 0.25);
-        ctx.lineTo(x + radius * 0.2, y + radius * 0.25);
+        // Нейтральный рот (слегка удивленная или спокойная линия)
+        ctx.moveTo(x - radius * 0.25, y + radius * 0.3);
+        ctx.lineTo(x + radius * 0.25, y + radius * 0.3);
     }
     ctx.stroke();
 }
