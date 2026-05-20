@@ -28,42 +28,37 @@ window.addEventListener('mousemove', (event) => {
     mouse.y = event.clientY;
 });
 
-// --- СЛУШАТЕЛИ КНОПОК МЫШИ ---
-
-// Когда зажимаем кнопку
-window.addEventListener('mousedown', (event) => {
-    if (event.button === 0) {
-        // Левая кнопка мыши (ЛКМ)
-        player.emotion = 'angry';
-    } else if (event.button === 2) {
-        // Правая кнопка мыши (ПКМ)
-        player.emotion = 'sad';
-    }
-});
-
-// Когда отпускаем кнопку — возвращаем обычную эмоцию
-window.addEventListener('mouseup', () => {
-    player.emotion = 'normal';
-});
-
-// Блокируем стандартное меню браузера при клике правой кнопкой, чтобы оно не мешало играть
-window.addEventListener('contextmenu', (event) => {
-    event.preventDefault();
-});
-
-
+// Настройка лепестков
 const petals = [];
 const petalCount = 5;
 const rotationSpeed = 0.03;
 let currentAngle = 0;
 
+// Базовые настройки лепестков
 for (let i = 0; i < petalCount; i++) {
     petals.push({
-        distance: 60,
+        distance: 60, // Текущая дистанция (будет меняться)
         radius: 10,
         color: '#ff3366'
     });
 }
+
+// --- СЛУШАТЕЛИ КНОПОК МЫШИ ---
+window.addEventListener('mousedown', (event) => {
+    if (event.button === 0) {
+        player.emotion = 'angry';
+    } else if (event.button === 2) {
+        player.emotion = 'sad';
+    }
+});
+
+window.addEventListener('mouseup', () => {
+    player.emotion = 'normal';
+});
+
+window.addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+});
 
 const mobs = [];
 let score = 0;
@@ -96,18 +91,23 @@ function gameLoop() {
     player.x += (mouse.x - player.x) * player.speed;
     player.y += (mouse.y - player.y) * player.speed;
 
-    // В зависимости от эмоции меняем цвет
+    // Переменная для новой дистанции лепестков
+    let targetDistance = 60; 
+
+    // Проверяем эмоцию, меняем цвет тела и дистанцию лепестков
     if (player.emotion === 'sad') {
-        player.color = '#9933ff'; // Фиолетовый (грустит)
+        player.color = '#9933ff'; // Фиолетовый
+        targetDistance = 40;      // Сжимаются ближе, когда грустит
     } else if (player.emotion === 'angry') {
-        player.color = '#ff3333'; // Красный (злится)
+        player.color = '#ff3333'; // Красный
+        targetDistance = 110;     // Улетают дальше, когда злится
     } else {
-        player.color = player.baseColor; // Синий
+        player.color = player.baseColor; // Обычный синий
+        targetDistance = 60;      // Обычное расстояние
     }
 
     // Рисуем игрока
     ctx.beginPath();
-    // Если грустит — сжимается
     let currentRadius = player.emotion === 'sad' ? player.radius - 4 : player.radius;
     ctx.arc(player.x, player.y, currentRadius, 0, Math.PI * 2);
     ctx.fillStyle = player.color;
@@ -116,7 +116,6 @@ function gameLoop() {
 
     // Рисуем глаза
     if (player.emotion === 'angry') {
-        // Злые брови/глаза
         ctx.strokeStyle = 'white';
         ctx.lineWidth = 3;
         ctx.beginPath();
@@ -124,14 +123,12 @@ function gameLoop() {
         ctx.moveTo(player.x + 12, player.y - 8); ctx.lineTo(player.x + 4, player.y - 2);
         ctx.stroke();
     } else if (player.emotion === 'sad') {
-        // Грустные точки
         ctx.fillStyle = 'white';
         ctx.beginPath();
         ctx.arc(player.x - 8, player.y - 2, 3, 0, Math.PI * 2);
         ctx.arc(player.x + 8, player.y - 2, 3, 0, Math.PI * 2);
         ctx.fill();
     } else {
-        // Обычные глаза
         ctx.fillStyle = 'white';
         ctx.beginPath();
         ctx.arc(player.x - 8, player.y - 5, 4, 0, Math.PI * 2);
@@ -143,6 +140,9 @@ function gameLoop() {
     currentAngle += rotationSpeed;
 
     petals.forEach((petal, index) => {
+        // Плавное изменение дистанции лепестков для красоты анимации
+        petal.distance += (targetDistance - petal.distance) * 0.1;
+
         let angle = currentAngle + (index * (Math.PI * 2 / petalCount));
         let petalX = player.x + Math.cos(angle) * petal.distance;
         let petalY = player.y + Math.sin(angle) * petal.distance;
