@@ -2,7 +2,6 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const scoreElement = document.getElementById('score');
 
-// Настраиваем размер экрана
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
@@ -16,11 +15,12 @@ const player = {
     x: canvas.width / 2,
     y: canvas.height / 2,
     radius: 25,
+    baseColor: '#0077ff', // Синий
     color: '#0077ff',
-    speed: 0.08
+    speed: 0.08,
+    emotion: 'normal' // normal, angry, sad
 };
 
-// Переменные для мыши
 const mouse = { x: canvas.width / 2, y: canvas.height / 2 };
 
 window.addEventListener('mousemove', (event) => {
@@ -28,7 +28,30 @@ window.addEventListener('mousemove', (event) => {
     mouse.y = event.clientY;
 });
 
-// Настройка лепестков
+// --- СЛУШАТЕЛИ КНОПОК МЫШИ ---
+
+// Когда зажимаем кнопку
+window.addEventListener('mousedown', (event) => {
+    if (event.button === 0) {
+        // Левая кнопка мыши (ЛКМ)
+        player.emotion = 'angry';
+    } else if (event.button === 2) {
+        // Правая кнопка мыши (ПКМ)
+        player.emotion = 'sad';
+    }
+});
+
+// Когда отпускаем кнопку — возвращаем обычную эмоцию
+window.addEventListener('mouseup', () => {
+    player.emotion = 'normal';
+});
+
+// Блокируем стандартное меню браузера при клике правой кнопкой, чтобы оно не мешало играть
+window.addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+});
+
+
 const petals = [];
 const petalCount = 5;
 const rotationSpeed = 0.03;
@@ -36,84 +59,106 @@ let currentAngle = 0;
 
 for (let i = 0; i < petalCount; i++) {
     petals.push({
-        distance: 60, // Дистанция от игрока
-        radius: 10,   // Размер лепестка
+        distance: 60,
+        radius: 10,
         color: '#ff3366'
     });
 }
 
-// Переменные для мобов (желтые квадраты)
 const mobs = [];
 let score = 0;
 
 function spawnMob() {
-    if (mobs.length < 10) { // Максимум 10 мобов на экране одновременно
+    if (mobs.length < 8) {
         mobs.push({
             x: Math.random() * (canvas.width - 40) + 20,
             y: Math.random() * (canvas.height - 40) + 20,
             size: 30,
             color: '#ffcc00',
-            hp: 3 // Нужно 3 удара лепестком, чтобы уничтожить
+            hp: 3
         });
     }
 }
 
-// Спавним моба каждые 1.5 секунды
 setInterval(spawnMob, 1500);
 
-// Функция проверки столкновения окружности (лепестка) и квадрата (моба)
 function checkCollision(circle, rect) {
     let closestX = Math.max(rect.x, Math.min(circle.x, rect.x + rect.size));
     let closestY = Math.max(rect.y, Math.min(circle.y, rect.y + rect.size));
-    
     let distanceX = circle.x - closestX;
     let distanceY = circle.y - closestY;
-    
-    let distanceSquared = (distanceX * distanceX) + (distanceY * distanceY);
-    return distanceSquared < (circle.radius * circle.radius);
+    return (distanceX * distanceX + distanceY * distanceY) < (circle.radius * circle.radius);
 }
 
-// Главный игровой цикл
 function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Плавное движение игрока к мышке
     player.x += (mouse.x - player.x) * player.speed;
     player.y += (mouse.y - player.y) * player.speed;
 
+    // В зависимости от эмоции меняем цвет
+    if (player.emotion === 'sad') {
+        player.color = '#9933ff'; // Фиолетовый (грустит)
+    } else if (player.emotion === 'angry') {
+        player.color = '#ff3333'; // Красный (злится)
+    } else {
+        player.color = player.baseColor; // Синий
+    }
+
     // Рисуем игрока
     ctx.beginPath();
-    ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+    // Если грустит — сжимается
+    let currentRadius = player.emotion === 'sad' ? player.radius - 4 : player.radius;
+    ctx.arc(player.x, player.y, currentRadius, 0, Math.PI * 2);
     ctx.fillStyle = player.color;
     ctx.fill();
     ctx.closePath();
 
+    // Рисуем глаза
+    if (player.emotion === 'angry') {
+        // Злые брови/глаза
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(player.x - 12, player.y - 8); ctx.lineTo(player.x - 4, player.y - 2);
+        ctx.moveTo(player.x + 12, player.y - 8); ctx.lineTo(player.x + 4, player.y - 2);
+        ctx.stroke();
+    } else if (player.emotion === 'sad') {
+        // Грустные точки
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(player.x - 8, player.y - 2, 3, 0, Math.PI * 2);
+        ctx.arc(player.x + 8, player.y - 2, 3, 0, Math.PI * 2);
+        ctx.fill();
+    } else {
+        // Обычные глаза
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(player.x - 8, player.y - 5, 4, 0, Math.PI * 2);
+        ctx.arc(player.x + 8, player.y - 5, 4, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
     // Вращение лепестков
     currentAngle += rotationSpeed;
 
-    // Просчет и отрисовка лепестков
     petals.forEach((petal, index) => {
         let angle = currentAngle + (index * (Math.PI * 2 / petalCount));
         let petalX = player.x + Math.cos(angle) * petal.distance;
         let petalY = player.y + Math.sin(angle) * petal.distance;
 
-        // Рисуем лепесток
         ctx.beginPath();
         ctx.arc(petalX, petalY, petal.radius, 0, Math.PI * 2);
         ctx.fillStyle = petal.color;
         ctx.fill();
         ctx.closePath();
 
-        // Проверяем удар лепестка по мобам
         mobs.forEach((mob, mobIndex) => {
             if (checkCollision({ x: petalX, y: petalY, radius: petal.radius }, mob)) {
-                mob.hp -= 1; // Отнимаем здоровье у моба
-                
-                // Отталкиваем моба чуть-чуть при ударе
-                mob.x += Math.cos(angle) * 10;
-                mob.y += Math.sin(angle) * 10;
+                mob.hp -= 1;
+                mob.x += Math.cos(angle) * 15;
+                mob.y += Math.sin(angle) * 15;
 
-                // Если у моба кончилось HP, удаляем его
                 if (mob.hp <= 0) {
                     mobs.splice(mobIndex, 1);
                     score += 10;
@@ -128,7 +173,6 @@ function gameLoop() {
         ctx.fillStyle = mob.color;
         ctx.fillRect(mob.x, mob.y, mob.size, mob.size);
         
-        // Рисуем полоску здоровья над мобом
         ctx.fillStyle = '#ff0000';
         ctx.fillRect(mob.x, mob.y - 10, mob.size, 4);
         ctx.fillStyle = '#00ff00';
@@ -138,5 +182,4 @@ function gameLoop() {
     requestAnimationFrame(gameLoop);
 }
 
-// Запуск игры
 gameLoop();
