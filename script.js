@@ -63,32 +63,41 @@ window.addEventListener('contextmenu', (event) => {
 const mobs = [];
 let score = 0;
 
-// Функция спавна мобов с РАЗНЫМИ РЕДКОСТЯМИ
+// Массивы названий для каждой цветовой группы
+const greenTier = ['Common', 'Unusual', 'Rare'];
+const redTier = ['Epic', 'Legendary', 'Mythic'];
+const blackTier = ['Ultra', 'Super', 'Hyper'];
+
 function spawnMob() {
     if (mobs.length < 10) {
         const rand = Math.random();
         let mobType;
 
-        if (rand < 0.6) {
-            // 60% шанс — Обычный (Зеленый)
-            mobType = { type: 'Common', size: 25, color: '#2ecc71', maxHp: 3 };
-        } else if (rand < 0.9) {
-            // 30% шанс — Редкий (Красный)
-            mobType = { type: 'Rare', size: 35, color: '#e74c3c', maxHp: 6 };
+        if (rand < 0.55) {
+            // 55% шанс — ЗЕЛЕНАЯ группа (Common, Unusual, Rare)
+            const name = greenTier[Math.floor(Math.random() * greenTier.length)];
+            mobType = { name: name, size: 25, color: '#2ecc71', strokeColor: null, maxHp: 3, points: 10 };
+        } else if (rand < 0.90) {
+            // 35% шанс — КРАСНАЯ группа (Epic, Legendary, Mythic)
+            const name = redTier[Math.floor(Math.random() * redTier.length)];
+            mobType = { name: name, size: 40, color: '#e74c3c', strokeColor: null, maxHp: 7, points: 30 };
         } else {
-            // 10% шанс — Мифический Босс (Черный с фиолетовым)
-            mobType = { type: 'Mythic', size: 55, color: '#111111', strokeColor: '#9b59b6', maxHp: 15 };
+            // 10% шанс — ЧЕРНАЯ группа (Ultra, Super, Hyper)
+            const name = blackTier[Math.floor(Math.random() * blackTier.length)];
+            // Чёрный моб с неоновой белой/фиолетовой обводкой, чтобы не сливался с фоном
+            mobType = { name: name, size: 60, color: '#111111', strokeColor: '#ffffff', maxHp: 20, points: 100 };
         }
 
         mobs.push({
-            x: Math.random() * (canvas.width - 60) + 30,
-            y: Math.random() * (canvas.height - 60) + 30,
+            x: Math.random() * (canvas.width - 70) + 35,
+            y: Math.random() * (canvas.height - 70) + 35,
             size: mobType.size,
             color: mobType.color,
-            strokeColor: mobType.strokeColor || null,
+            strokeColor: mobType.strokeColor,
             hp: mobType.maxHp,
             maxHp: mobType.maxHp,
-            type: mobType.type
+            name: mobType.name,
+            points: mobType.points
         });
     }
 }
@@ -103,18 +112,15 @@ function checkCollision(circle, rect) {
     return (distanceX * distanceX + distanceY * distanceY) < (circle.radius * circle.radius);
 }
 
-// Функция для рисования крутого фона в стиле Hornex
+// Фон Hornex
 function drawHornexGrid() {
-    // Заливаем экран тёмным цветом
     ctx.fillStyle = '#161a1d';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Рисуем сетку
     ctx.lineWidth = 1;
     const gridSize = 50;
 
     for (let x = 0; x < canvas.width; x += gridSize) {
-        // Чередуем цвета линий: зеленый и красный
         ctx.strokeStyle = (x % 100 === 0) ? 'rgba(46, 204, 113, 0.15)' : 'rgba(231, 76, 60, 0.1)';
         ctx.beginPath();
         ctx.moveTo(x, 0);
@@ -132,7 +138,6 @@ function drawHornexGrid() {
 }
 
 function gameLoop() {
-    // Рисуем Хорнекс-фон вместо простой очистки экрана
     drawHornexGrid();
 
     player.x += (mouse.x - player.x) * player.speed;
@@ -269,13 +274,8 @@ function gameLoop() {
                 mob.y += Math.sin(angle) * 12;
 
                 if (mob.hp <= 0) {
+                    score += mob.points;
                     mobs.splice(mobIndex, 1);
-                    
-                    // Начисление очков в зависимости от редкости моба
-                    if (mob.type === 'Common') score += 10;
-                    if (mob.type === 'Rare') score += 25;
-                    if (mob.type === 'Mythic') score += 100; // За босса много очков!
-                    
                     scoreElement.innerText = "Очки: " + score;
                 }
             }
@@ -287,13 +287,18 @@ function gameLoop() {
         ctx.fillStyle = mob.color;
         ctx.fillRect(mob.x, mob.y, mob.size, mob.size);
         
-        // Если это Мифический моб, рисуем ему фиолетовую обводку
         if (mob.strokeColor) {
             ctx.strokeStyle = mob.strokeColor;
             ctx.lineWidth = 3;
             ctx.strokeRect(mob.x, mob.y, mob.size, mob.size);
         }
         
+        // РИСУЕМ ТЕКСТ РЕДКОСТИ НАД МОБОМ
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '10px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(mob.name, mob.x + mob.size / 2, mob.y - 16);
+
         // Полоска здоровья
         ctx.fillStyle = '#ff0000';
         ctx.fillRect(mob.x, mob.y - 10, mob.size, 4);
