@@ -16,7 +16,7 @@
         canvas {
             display: block;
         }
-        /* Простой интерфейс поверх игры */
+        /* Стильный интерфейс для очков поверх игры */
         #ui {
             position: absolute;
             top: 20px;
@@ -25,14 +25,20 @@
             text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
             pointer-events: none; /* Чтобы мышка кликала сквозь текст */
         }
-        h1 { margin: 0; font-size: 24px; color: #4ade80; tracking-wide; }
+        /* Красивый счетчик очков */
+        #score { 
+            margin: 0; 
+            font-size: 28px; 
+            color: #4ade80; 
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
     </style>
 </head>
 <body>
 
     <div id="ui">
-        <h1>FLOZER.PRO</h1>
-        <p>Управление: Движение мыши</p>
+        <div id="score">Очки: 0</div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
