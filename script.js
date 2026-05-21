@@ -16,7 +16,7 @@ const player = {
     y: canvas.height / 2,
     radius: 25,
     color: '#ffcc00', 
-    speed: 0.04, // --- УМЕНЬШИЛИ СКОРОСТЬ (было 0.08), теперь движение более плавное ---
+    speed: 0.04, 
     emotion: 'normal',
     hp: 100,
     maxHp: 100
@@ -66,33 +66,46 @@ window.addEventListener('contextmenu', (event) => {
 let mobs = [];
 let score = 0;
 
-// Массивы названий для каждой группы
-const greenTier = ['Common', 'Unusual', 'Rare'];
-const redTier = ['Epic', 'Legendary', 'Mythic'];
-const blackTier = ['Ultra', 'Super', 'Hyper'];
-
 function spawnMob() {
     if (mobs.length < 10) {
         const rand = Math.random();
-        let mobType;
+        let mobType = {};
 
         if (rand < 0.55) {
-            // ЗЕЛЕНАЯ группа
-            const name = greenTier[Math.floor(Math.random() * greenTier.length)];
-            mobType = { name: name, radius: 15, color: '#2ecc71', strokeColor: null, maxHp: 3, points: 10, damage: 0.5 };
+            // ЗЕЛЕНАЯ ГРУППА (Hornex ранги)
+            const randTier = Math.random();
+            if (randTier < 0.60) {
+                mobType = { name: 'Common', radius: 14, color: '#2ecc71', strokeColor: null, maxHp: 3, damage: 0.5, points: 10 };
+            } else if (randTier < 0.90) {
+                mobType = { name: 'Unusual', radius: 17, color: '#27ae60', strokeColor: null, maxHp: 5, damage: 1, points: 15 };
+            } else {
+                mobType = { name: 'Rare', radius: 20, color: '#1abc9c', strokeColor: null, maxHp: 8, damage: 1.5, points: 20 };
+            }
         } else if (rand < 0.90) {
-            // КРАСНАЯ группа
-            const name = redTier[Math.floor(Math.random() * redTier.length)];
-            mobType = { name: name, radius: 22, color: '#e74c3c', strokeColor: null, maxHp: 7, points: 30, damage: 1.5 };
+            // КРАСНАЯ ГРУППА (Hornex ранги)
+            const randTier = Math.random();
+            if (randTier < 0.60) {
+                mobType = { name: 'Epic', radius: 24, color: '#e67e22', strokeColor: null, maxHp: 12, damage: 2, points: 30 };
+            } else if (randTier < 0.90) {
+                mobType = { name: 'Legendary', radius: 28, color: '#e74c3c', strokeColor: null, maxHp: 18, damage: 3, points: 45 };
+            } else {
+                mobType = { name: 'Mythic', radius: 32, color: '#9b59b6', strokeColor: null, maxHp: 25, damage: 4, points: 60 };
+            }
         } else {
-            // ЧЕРНАЯ группа
-            const name = blackTier[Math.floor(Math.random() * blackTier.length)];
-            mobType = { name: name, radius: 35, color: '#111111', strokeColor: '#ffffff', maxHp: 20, points: 100, damage: 4 };
+            // ЧЕРНАЯ ГРУППА (Hornex Боссы)
+            const randTier = Math.random();
+            if (randTier < 0.60) {
+                mobType = { name: 'Ultra', radius: 38, color: '#111111', strokeColor: '#ffffff', maxHp: 40, damage: 6, points: 100 };
+            } else if (randTier < 0.90) {
+                mobType = { name: 'Super', radius: 45, color: '#111111', strokeColor: '#e74c3c', maxHp: 60, damage: 8, points: 150 };
+            } else {
+                mobType = { name: 'Hyper', radius: 55, color: '#111111', strokeColor: '#ffcc00', maxHp: 100, damage: 12, points: 250 };
+            }
         }
 
         mobs.push({
-            x: Math.random() * (canvas.width - 100) + 50,
-            y: Math.random() * (canvas.height - 100) + 50,
+            x: Math.random() * (canvas.width - 150) + 75,
+            y: Math.random() * (canvas.height - 150) + 75,
             radius: mobType.radius, 
             color: mobType.color,
             strokeColor: mobType.strokeColor,
@@ -127,7 +140,7 @@ function restartGame() {
     player.y = canvas.height / 2;
 }
 
-// Улучшенный динамический фон
+// Динамический фон
 function drawHornexGrid() {
     let bgColor = '#142217';       
     let gridColor1 = 'rgba(46, 204, 113, 0.25)'; 
@@ -189,13 +202,11 @@ function gameLoop() {
     ctx.fill();
     ctx.closePath();
 
-    // Координаты лица
     let leftEyeX = player.x - 8;
     let rightEyeX = player.x + 8;
     let eyeY = player.y - 4;
 
     if (player.emotion === 'angry') {
-        // --- ЗЛЫЕ ГЛАЗА И РОТИК ---
         ctx.fillStyle = '#000000'; 
         ctx.beginPath();
         ctx.ellipse(leftEyeX, eyeY, 5, 7, -Math.PI / 6, 0, Math.PI * 2);
@@ -222,7 +233,6 @@ function gameLoop() {
         ctx.stroke();
 
     } else if (player.emotion === 'sad') {
-        // --- ГРУСТНЫЕ ГЛАЗА И РОТИК ---
         ctx.fillStyle = '#000000'; 
         ctx.beginPath();
         ctx.ellipse(leftEyeX, eyeY, 6, 7, 0, 0, Math.PI * 2);
@@ -249,7 +259,6 @@ function gameLoop() {
         ctx.stroke();
 
     } else {
-        // --- ОБЫЧНЫЕ ГЛАЗА И РОТИК ---
         ctx.fillStyle = '#000000'; 
         ctx.beginPath();
         ctx.ellipse(leftEyeX, eyeY, 6, 8, 0, 0, Math.PI * 2);
@@ -292,7 +301,6 @@ function gameLoop() {
         ctx.fill();
         ctx.closePath();
 
-        // Проверяем столкновения лепестков с мобами
         mobs.forEach((mob) => {
             if (mob.isDead) return;
 
@@ -305,7 +313,6 @@ function gameLoop() {
                     mob.damageTimer = 8;
                 }
 
-                // Лепестки всегда наносят 1 единицу урона
                 mob.hp -= 1; 
                 mob.x += Math.cos(angle) * 12;
                 mob.y += Math.sin(angle) * 12;
@@ -321,14 +328,13 @@ function gameLoop() {
         });
     });
 
-    // --- ПРОВЕРКА УРОНА ИГРОКУ ОТ МОБОВ И ТЕЛОМ ИГРОКА ПО МОБАМ ---
+    // --- СТОЛКНОВЕНИЕ ТЕЛА ИГРОКА С МОБАМИ ---
     mobs.forEach((mob) => {
         if (mob.isDead) return;
 
         if (checkCircleCollision({ x: player.x, y: player.y, radius: player.radius }, mob)) {
             player.hp -= mob.damage; 
             
-            // Тело игрока наносит 1 единицу урона в злом режиме
             if (player.emotion === 'angry') {
                 mob.hp -= 1; 
                 if (mob.damageTimer === 0) {
@@ -336,16 +342,14 @@ function gameLoop() {
                 }
             }
 
-            // Отталкиваем игрока чуть назад при столкновении
             let dx = player.x - mob.x;
             let dy = player.y - mob.y;
             let dist = Math.sqrt(dx * dx + dy * dy);
             if (dist > 0) {
-                player.x += (dx / dist) * 5;
-                player.y += (dy / dist) * 5;
+                player.x += (dx / dist) * 6; // Чуть сильнее отталкивание от крупных мобов
+                player.y += (dy / dist) * 6;
             }
 
-            // Если моб умер от тарана телом
             if (mob.hp <= 0) {
                 mob.isDead = true; 
                 score += mob.points;
@@ -354,7 +358,6 @@ function gameLoop() {
                 }
             }
 
-            // Проверка на гибель игрока
             if (player.hp <= 0) {
                 alert("Вы погибли! Игра перезапустится.");
                 restartGame();
@@ -362,10 +365,9 @@ function gameLoop() {
         }
     });
 
-    // Удаляем мертвых мобов
     mobs = mobs.filter(mob => !mob.isDead);
 
-    // Отрисовка КРУГЛЫХ мобов
+    // Отрисовка мобов
     mobs.forEach((mob) => {
         if (mob.damageTimer > 0) {
             mob.damageTimer--;
@@ -379,21 +381,22 @@ function gameLoop() {
         ctx.fill();
         ctx.closePath();
         
+        // Кастомная жирная обводка для черных боссов (Ultra, Super, Hyper)
         if (mob.strokeColor && mob.damageTimer === 0) {
             ctx.strokeStyle = mob.strokeColor;
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 4; // Сделали обводку толще
             ctx.beginPath();
-            ctx.arc(mob.x, mob.y, mob.radius, 0, Math.PI * 2);
+            ctx.arc(mob.x, mob.y, mob.radius - 2, 0, Math.PI * 2);
             ctx.stroke();
             ctx.closePath();
         }
         
         ctx.fillStyle = '#ffffff';
-        ctx.font = '10px Arial';
+        ctx.font = 'bold 10px Arial';
         ctx.textAlign = 'center';
         ctx.fillText(mob.name, mob.x, mob.y - mob.radius - 12);
 
-        // Полоска здоровья моба
+        // Полоска здоровья моба (адаптируется под размер моба)
         const barWidth = mob.radius * 2;
         ctx.fillStyle = '#ff0000';
         ctx.fillRect(mob.x - mob.radius, mob.y - mob.radius - 6, barWidth, 4);
@@ -401,7 +404,7 @@ function gameLoop() {
         ctx.fillRect(mob.x - mob.radius, mob.y - mob.radius - 6, barWidth * (mob.hp / mob.maxHp), 4);
     });
 
-    // --- ПОЛОСКА ЗДОРОВЬЯ ИГРОКА ---
+    // Полоска здоровья игрока
     const pBarWidth = 50;
     const pBarHeight = 6;
     const pBarX = player.x - pBarWidth / 2;
