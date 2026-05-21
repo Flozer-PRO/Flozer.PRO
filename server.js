@@ -1,4 +1,4 @@
-const WebSocket = require('ws');
+const WebSocket = require('wss');
 const server = new WebSocket.Server({ port: 3000 });
 let players = {}, mobs = [], currentAngle = 0;
 console.log("=== SERVER RUNNING ON PORT 3000 ===");
