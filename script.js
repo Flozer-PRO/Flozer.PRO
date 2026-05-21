@@ -16,7 +16,7 @@ const player = {
     y: canvas.height / 2,
     radius: 25,
     color: '#ffcc00', 
-    speed: 0.08,
+    speed: 0.04, // --- УМЕНЬШИЛИ СКОРОСТЬ (было 0.08), теперь движение более плавное ---
     emotion: 'normal',
     hp: 100,
     maxHp: 100
@@ -325,15 +325,14 @@ function gameLoop() {
     mobs.forEach((mob) => {
         if (mob.isDead) return;
 
-        // Если игрок врезается телом в моба
         if (checkCircleCollision({ x: player.x, y: player.y, radius: player.radius }, mob)) {
-            player.hp -= mob.damage; // Игрок получает урон
+            player.hp -= mob.damage; 
             
-            // --- ТЕЛО ИГРОКА НАНОСИТ 1 ЕДИНИЦУ УРОНА В ЗЛОМ РЕЖИМЕ ---
+            // Тело игрока наносит 1 единицу урона в злом режиме
             if (player.emotion === 'angry') {
-                mob.hp -= 1; // Урон от игрока мобу!
+                mob.hp -= 1; 
                 if (mob.damageTimer === 0) {
-                    mob.damageTimer = 8; // Включаем белое мерцание у моба
+                    mob.damageTimer = 8; 
                 }
             }
 
