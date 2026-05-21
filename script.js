@@ -1,4 +1,3 @@
-// Подключение к твоему серверу flozer-pro
 const SERVER_URL = 'wss://flozer-pro.onrender.com';
 
 const canvas = document.getElementById('gameCanvas');
@@ -11,6 +10,11 @@ window.addEventListener('resize', () => { canvas.width = window.innerWidth; canv
 const socket = new WebSocket(SERVER_URL);
 let myId = null, players = {}, mobs = [], score = 0, currentAngle = 0;
 const mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+
+socket.onopen = () => {
+    // Говорим серверу, что мы подключились как новый актуальный игрок
+    socket.send(JSON.stringify({ type: 'join' }));
+};
 
 window.addEventListener('mousemove', (e) => { 
     mouse.x = e.clientX; 
@@ -101,4 +105,12 @@ function gameLoop() {
         if (mob.strokeColor && mob.damageTimer === 0) { ctx.strokeStyle = mob.strokeColor; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(mob.x, mob.y, mob.radius - 2, 0, Math.PI * 2); ctx.stroke(); }
         ctx.fillStyle = mob.textColor; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; ctx.fillText(mob.name, mob.x, mob.y - mob.radius - 12);
         
-        ctx.fillStyle = '#ff
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(mob.x - mob.radius, mob.y - mob.radius - 6, mob.radius * 2, 4);
+        ctx.fillStyle = '#00ff00'; 
+        ctx.fillRect(mob.x - mob.radius, mob.y - mob.radius - 6, (mob.radius * 2) * (mob.hp / mob.maxHp), 4);
+    });
+    
+    requestAnimationFrame(gameLoop);
+}
+gameLoop();
