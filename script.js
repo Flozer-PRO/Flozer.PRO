@@ -17,7 +17,10 @@ const player = {
     radius: 25,
     color: '#ffcc00', 
     speed: 0.08,
-    emotion: 'normal'
+    emotion: 'normal',
+    // --- ДОБАВИЛИ ХП ИГРОКА ---
+    hp: 100,
+    maxHp: 100
 };
 
 const mouse = { x: canvas.width / 2, y: canvas.height / 2 };
@@ -77,27 +80,28 @@ function spawnMob() {
         if (rand < 0.55) {
             // ЗЕЛЕНАЯ группа
             const name = greenTier[Math.floor(Math.random() * greenTier.length)];
-            mobType = { name: name, radius: 15, color: '#2ecc71', strokeColor: null, maxHp: 3, points: 10 };
+            mobType = { name: name, radius: 15, color: '#2ecc71', strokeColor: null, maxHp: 3, points: 10, damage: 0.5 };
         } else if (rand < 0.90) {
             // КРАСНАЯ группа
             const name = redTier[Math.floor(Math.random() * redTier.length)];
-            mobType = { name: name, radius: 22, color: '#e74c3c', strokeColor: null, maxHp: 7, points: 30 };
+            mobType = { name: name, radius: 22, color: '#e74c3c', strokeColor: null, maxHp: 7, points: 30, damage: 1.5 };
         } else {
             // ЧЕРНАЯ группа
             const name = blackTier[Math.floor(Math.random() * blackTier.length)];
-            mobType = { name: name, radius: 35, color: '#111111', strokeColor: '#ffffff', maxHp: 20, points: 100 };
+            mobType = { name: name, radius: 35, color: '#111111', strokeColor: '#ffffff', maxHp: 20, points: 100, damage: 4 };
         }
 
         mobs.push({
             x: Math.random() * (canvas.width - 100) + 50,
             y: Math.random() * (canvas.height - 100) + 50,
-            radius: mobType.radius, // Теперь используем радиус круга вместо размера size
+            radius: mobType.radius, 
             color: mobType.color,
             strokeColor: mobType.strokeColor,
             hp: mobType.maxHp,
             maxHp: mobType.maxHp,
             name: mobType.name,
             points: mobType.points,
+            damage: mobType.damage, // Урон, который наносит этот моб
             damageTimer: 0,
             isDead: false
         });
@@ -106,12 +110,22 @@ function spawnMob() {
 
 setInterval(spawnMob, 1200);
 
-// ТОЧНАЯ ПРОВЕРКА СТОЛКНОВЕНИЯ: Круг с кругом (Лепесток и Моб)
+// Функция проверки коллизии круг-круг
 function checkCircleCollision(circle1, circle2) {
     let dx = circle1.x - circle2.x;
     let dy = circle1.y - circle2.y;
     let distance = Math.sqrt(dx * dx + dy * dy);
     return distance < (circle1.radius + circle2.radius);
+}
+
+// Функция перезапуска игры при смерти
+function restartGame() {
+    player.hp = player.maxHp;
+    score = 0;
+    if (scoreElement) scoreElement.innerText = "Очки: " + score;
+    mobs = [];
+    player.x = canvas.width / 2;
+    player.y = canvas.height / 2;
 }
 
 // Улучшенный динамический фон
@@ -279,11 +293,10 @@ function gameLoop() {
         ctx.fill();
         ctx.closePath();
 
-        // Проверяем столкновения
+        // Проверяем столкновения лепестков с мобами
         mobs.forEach((mob) => {
             if (mob.isDead) return;
 
-            // Теперь проверяем столкновение КРУГЛОГО лепестка и КРУГЛОГО моба
             if (checkCircleCollision({ x: petalX, y: petalY, radius: petal.radius }, mob)) {
                 if (petal.damageTimer === 0) {
                     petal.damageTimer = 10;
@@ -293,7 +306,7 @@ function gameLoop() {
                     mob.damageTimer = 8;
                 }
 
-                mob.hp -= 1;
+                mob.hp -= 1; // Урон игрока мобам (1 хп за удар)
                 mob.x += Math.cos(angle) * 12;
                 mob.y += Math.sin(angle) * 12;
 
@@ -308,10 +321,35 @@ function gameLoop() {
         });
     });
 
+    // --- ПРОВЕРКА УРОНА ИГРОКУ ОТ МОБОВ ---
+    mobs.forEach((mob) => {
+        if (mob.isDead) return;
+
+        // Если игрок врезается телом в моба
+        if (checkCircleCollision({ x: player.x, y: player.y, radius: player.radius }, mob)) {
+            player.hp -= mob.damage; // Игрок получает урон в зависимости от силы моба
+            
+            // Отталкиваем игрока чуть назад при столкновении
+            let dx = player.x - mob.x;
+            let dy = player.y - mob.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist > 0) {
+                player.x += (dx / dist) * 5;
+                player.y += (dy / dist) * 5;
+            }
+
+            // Проверка на гибель
+            if (player.hp <= 0) {
+                alert("Вы погибли! Игра перезапустится.");
+                restartGame();
+            }
+        }
+    });
+
     // Удаляем мертвых мобов
     mobs = mobs.filter(mob => !mob.isDead);
 
-    // Отрисовка КРУГЛЫХ мобов
+    // Отрисовка КРУГЛЫХ мобов (Они стоят на месте!)
     mobs.forEach((mob) => {
         if (mob.damageTimer > 0) {
             mob.damageTimer--;
@@ -320,13 +358,11 @@ function gameLoop() {
             ctx.fillStyle = mob.color; 
         }
         
-        // РИСУЕМ КРУГ вместо квадрата!
         ctx.beginPath();
         ctx.arc(mob.x, mob.y, mob.radius, 0, Math.PI * 2);
         ctx.fill();
         ctx.closePath();
         
-        // Обводка для Черных (Ультра) мобов
         if (mob.strokeColor && mob.damageTimer === 0) {
             ctx.strokeStyle = mob.strokeColor;
             ctx.lineWidth = 3;
@@ -336,19 +372,34 @@ function gameLoop() {
             ctx.closePath();
         }
         
-        // Текст редкости (центрируется над кругом)
         ctx.fillStyle = '#ffffff';
         ctx.font = '10px Arial';
         ctx.textAlign = 'center';
         ctx.fillText(mob.name, mob.x, mob.y - mob.radius - 12);
 
-        // Полоска здоровья (подстраивается под радиус моба)
+        // Полоска здоровья моба
         const barWidth = mob.radius * 2;
         ctx.fillStyle = '#ff0000';
         ctx.fillRect(mob.x - mob.radius, mob.y - mob.radius - 6, barWidth, 4);
         ctx.fillStyle = '#00ff00';
         ctx.fillRect(mob.x - mob.radius, mob.y - mob.radius - 6, barWidth * (mob.hp / mob.maxHp), 4);
     });
+
+    // --- ПОЛОСКА ЗДОРОВЬЯ ИГРОКА ---
+    const pBarWidth = 50;
+    const pBarHeight = 6;
+    const pBarX = player.x - pBarWidth / 2;
+    const pBarY = player.y - player.radius - 20;
+
+    // Фон полоски игрока (серый)
+    ctx.fillStyle = '#374151';
+    ctx.fillRect(pBarX, pBarY, pBarWidth, pBarHeight);
+
+    // Текущее здоровье (ярко-зеленое)
+    if (player.hp > 0) {
+        ctx.fillStyle = '#4ade80';
+        ctx.fillRect(pBarX, pBarY, pBarWidth * (player.hp / player.maxHp), pBarHeight);
+    }
 
     requestAnimationFrame(gameLoop);
 }
