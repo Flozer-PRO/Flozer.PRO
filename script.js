@@ -10,150 +10,70 @@ window.addEventListener('resize', () => {
     canvas.height = window.innerHeight;
 });
 
-// Переменные для игрока
-const player = {
-    x: canvas.width / 2,
-    y: canvas.height / 2,
-    radius: 25,
-    color: '#ffcc00', 
-    speed: 0.04, 
-    emotion: 'normal',
-    hp: 100,
-    maxHp: 100
-};
+// === ПОДКЛЮЧЕНИЕ К СЕРВЕРУ ===
+const socket = new WebSocket('ws://localhost:8080');
 
+let myId = null;
+let players = {};
+let mobs = [];
+let score = 0;
 const mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+let currentAngle = 0;
 
+// Отправка координат мыши на сервер при движении
 window.addEventListener('mousemove', (event) => {
     mouse.x = event.clientX;
     mouse.y = event.clientY;
+    sendClientUpdate();
 });
 
-// Настройка лепестков
-const petals = [];
-const petalCount = 5;
-const rotationSpeed = 0.03;
-let currentAngle = 0;
-
-// Таймер для регенерации лепестков
-let petalRegenTimer = 0;
-
-for (let i = 0; i < petalCount; i++) {
-    petals.push({
-        distance: 60, 
-        radius: 10,
-        baseColor: '#ffffff', 
-        currentColor: '#ffffff', 
-        damageTimer: 0,
-        hp: 3,       // --- МАКСИМАЛЬНОЕ ХП ЛЕПЕСТКА ---
-        maxHp: 3,
-        isBroken: false
-    });
-}
-
-// --- СЛУШАТЕЛИ КНОПОК МЫШИ ---
+// Отправка эмоций на сервер при кликах мыши
 window.addEventListener('mousedown', (event) => {
-    if (event.button === 0) {
-        player.emotion = 'angry';
-    } else if (event.button === 2) {
-        player.emotion = 'sad';
+    let emotion = 'normal';
+    if (event.button === 0) emotion = 'angry'; // ЛКМ — злой
+    else if (event.button === 2) emotion = 'sad'; // ПКМ — грустный
+    
+    if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'changeEmotion', emotion: emotion }));
     }
 });
 
 window.addEventListener('mouseup', () => {
-    player.emotion = 'normal';
+    if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'changeEmotion', emotion: 'normal' }));
+    }
 });
 
-window.addEventListener('contextmenu', (event) => {
-    event.preventDefault();
-});
+// Блокируем стандартное меню мыши по правой кнопке
+window.addEventListener('contextmenu', (event) => event.preventDefault());
 
-// Массив мобов
-let mobs = [];
-let score = 0;
-
-function spawnMob() {
-    if (mobs.length < 10) {
-        const rand = Math.random();
-        let mobType = {};
-
-        if (rand < 0.55) {
-            // ЗЕЛЕНАЯ ГРУППА
-            const randTier = Math.random();
-            if (randTier < 0.60) {
-                mobType = { name: 'Common', radius: 14, color: '#2ecc71', strokeColor: null, textColor: '#2ecc71', maxHp: 3, damage: 0.5, points: 10 };
-            } else if (randTier < 0.90) {
-                mobType = { name: 'Unusual', radius: 17, color: '#27ae60', strokeColor: null, textColor: '#27ae60', maxHp: 5, damage: 1, points: 15 };
-            } else {
-                mobType = { name: 'Rare', radius: 20, color: '#1abc9c', strokeColor: null, textColor: '#1abc9c', maxHp: 8, damage: 1.5, points: 20 };
-            }
-        } else if (rand < 0.90) {
-            // КРАСНАЯ ГРУППА
-            const randTier = Math.random();
-            if (randTier < 0.60) {
-                mobType = { name: 'Epic', radius: 24, color: '#e67e22', strokeColor: null, textColor: '#e67e22', maxHp: 12, damage: 2, points: 30 };
-            } else if (randTier < 0.90) {
-                mobType = { name: 'Legendary', radius: 28, color: '#e74c3c', strokeColor: null, textColor: '#e74c3c', maxHp: 18, damage: 3, points: 45 };
-            } else {
-                mobType = { name: 'Mythic', radius: 32, color: '#9b59b6', strokeColor: null, textColor: '#9b59b6', maxHp: 25, damage: 4, points: 60 };
-            }
-        } else {
-            // ЧЕРНАЯ ГРУППА
-            const randTier = Math.random();
-            if (randTier < 0.60) {
-                mobType = { name: 'Ultra', radius: 38, color: '#111111', strokeColor: '#ffffff', textColor: '#ffffff', maxHp: 40, damage: 6, points: 100 };
-            } else if (randTier < 0.90) {
-                mobType = { name: 'Super', radius: 45, color: '#111111', strokeColor: '#e74c3c', textColor: '#e74c3c', maxHp: 60, damage: 8, points: 150 };
-            } else {
-                mobType = { name: 'Hyper', radius: 55, color: '#111111', strokeColor: '#ffcc00', textColor: '#ffcc00', maxHp: 100, damage: 12, points: 250 };
-            }
-        }
-
-        mobs.push({
-            x: Math.random() * (canvas.width - 150) + 75,
-            y: Math.random() * (canvas.height - 150) + 75,
-            radius: mobType.radius, 
-            color: mobType.color,
-            strokeColor: mobType.strokeColor,
-            textColor: mobType.textColor, 
-            hp: mobType.maxHp,
-            maxHp: mobType.maxHp,
-            name: mobType.name,
-            points: mobType.points,
-            damage: mobType.damage, 
-            damageTimer: 0,
-            isDead: false
-        });
+function sendClientUpdate() {
+    if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'move', mouseX: mouse.x, mouseY: mouse.y }));
     }
 }
 
-setInterval(spawnMob, 1200);
+// === ПРИЕМ ДАННЫХ ОТ СЕРВЕРА ===
+socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
 
-// Функция проверки коллизии
-function checkCircleCollision(circle1, circle2) {
-    let dx = circle1.x - circle2.x;
-    let dy = circle1.y - circle2.y;
-    let distance = Math.sqrt(dx * dx + dy * dy);
-    return distance < (circle1.radius + circle2.radius);
-}
+    if (data.type === 'init') {
+        myId = data.id; // Получаем наш личный ID от сервера
+    }
 
-// Перезапуск игры
-function restartGame() {
-    player.hp = player.maxHp;
-    score = 0;
-    if (scoreElement) scoreElement.innerText = "Очки: " + score;
-    mobs = [];
-    player.x = canvas.width / 2;
-    player.y = canvas.height / 2;
-    
-    // Восстанавливаем лепестки при перезапуске
-    petals.forEach(petal => {
-        petal.hp = petal.maxHp;
-        petal.isBroken = false;
-    });
-}
+    if (data.type === 'update') {
+        players = data.players; // Обновляем список всех игроков на карте
+        mobs = data.mobs;       // Обновляем список мобов
+        
+        // Обновляем счетчик очков на экране
+        if (players[myId]) {
+            score = players[myId].score;
+            if (scoreElement) scoreElement.innerText = "Очки: " + score;
+        }
+    }
+};
 
-// Динамический фон
+// === ДИНАМИЧЕСКИЙ ФОН (Твой оригинальный дизайн) ===
 function drawHornexGrid() {
     let bgColor = '#142217';       
     let gridColor1 = 'rgba(46, 204, 113, 0.25)'; 
@@ -172,268 +92,137 @@ function drawHornexGrid() {
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.lineWidth = 1;
     const gridSize = 50;
-
     for (let x = 0; x < canvas.width; x += gridSize) {
         ctx.strokeStyle = (x % 100 === 0) ? gridColor1 : gridColor2;
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
-        ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
     }
-
     for (let y = 0; y < canvas.height; y += gridSize) {
         ctx.strokeStyle = (y % 100 === 0) ? gridColor1 : gridColor2;
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
     }
 }
 
-function gameLoop() {
-    drawHornexGrid();
+// === ОТРИСОВКА ЛИЦА (Твоя графика эмоций) ===
+function drawFace(x, y, emotion) {
+    let leftEyeX = x - 8;
+    let rightEyeX = x + 8;
+    let eyeY = y - 4;
 
-    player.x += (mouse.x - player.x) * player.speed;
-    player.y += (mouse.y - player.y) * player.speed;
-
-    let targetDistance = 60; 
-
-    if (player.emotion === 'sad') {
-        targetDistance = 40; 
-    } else if (player.emotion === 'angry') {
-        targetDistance = 110; 
-    } else {
-        targetDistance = 60; 
-    }
-
-    // Рисуем тело игрока
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-    ctx.fillStyle = player.color;
-    ctx.fill();
-    ctx.closePath();
-
-    let leftEyeX = player.x - 8;
-    let rightEyeX = player.x + 8;
-    let eyeY = player.y - 4;
-
-    if (player.emotion === 'angry') {
-        ctx.fillStyle = '#000000'; 
-        ctx.beginPath();
+    if (emotion === 'angry') {
+        ctx.fillStyle = '#000000'; ctx.beginPath();
         ctx.ellipse(leftEyeX, eyeY, 5, 7, -Math.PI / 6, 0, Math.PI * 2);
         ctx.ellipse(rightEyeX, eyeY, 5, 7, Math.PI / 6, 0, Math.PI * 2);
         ctx.fill();
-
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(player.x - 14, player.y - 12); ctx.lineTo(player.x - 2, player.y - 6);
-        ctx.moveTo(player.x + 14, player.y - 12); ctx.lineTo(player.x + 2, player.y - 6);
+        ctx.strokeStyle = '#000000'; ctx.lineWidth = 3; ctx.beginPath();
+        ctx.moveTo(x - 14, y - 12); ctx.lineTo(x - 2, y - 6);
+        ctx.moveTo(x + 14, y - 12); ctx.lineTo(x + 2, y - 6);
         ctx.stroke();
-
-        ctx.fillStyle = '#ffffff'; 
-        ctx.beginPath();
+        ctx.fillStyle = '#ffffff'; ctx.beginPath();
         ctx.arc(leftEyeX + 1, eyeY + 1, 2, 0, Math.PI * 2);
         ctx.arc(rightEyeX - 1, eyeY + 1, 2, 0, Math.PI * 2);
         ctx.fill();
-
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(player.x, player.y + 12, 6, Math.PI, 0, false);
-        ctx.stroke();
-
-    } else if (player.emotion === 'sad') {
-        ctx.fillStyle = '#000000'; 
-        ctx.beginPath();
+        ctx.strokeStyle = '#000000'; ctx.lineWidth = 3; ctx.beginPath();
+        ctx.arc(x, y + 12, 6, Math.PI, 0, false); ctx.stroke();
+    } else if (emotion === 'sad') {
+        ctx.fillStyle = '#000000'; ctx.beginPath();
         ctx.ellipse(leftEyeX, eyeY, 6, 7, 0, 0, Math.PI * 2);
         ctx.ellipse(rightEyeX, eyeY, 6, 7, 0, 0, Math.PI * 2);
         ctx.fill();
-
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(player.x - 13, player.y - 10); ctx.lineTo(player.x - 4, player.y - 13);
-        ctx.moveTo(player.x + 13, player.y - 10); ctx.lineTo(player.x + 4, player.y - 13);
+        ctx.strokeStyle = '#000000'; ctx.lineWidth = 2; ctx.beginPath();
+        ctx.moveTo(x - 13, y - 10); ctx.lineTo(x - 4, y - 13);
+        ctx.moveTo(x + 13, y - 10); ctx.lineTo(x + 4, y - 13);
         ctx.stroke();
-
-        ctx.fillStyle = '#ffffff'; 
-        ctx.beginPath();
+        ctx.fillStyle = '#ffffff'; ctx.beginPath();
         ctx.arc(leftEyeX - 1, eyeY + 2, 2.5, 0, Math.PI * 2);
         ctx.arc(rightEyeX + 1, eyeY + 2, 2.5, 0, Math.PI * 2);
         ctx.fill();
-
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(player.x, player.y + 12, 6, Math.PI, 0, false);
-        ctx.stroke();
-
+        ctx.strokeStyle = '#000000'; ctx.lineWidth = 3; ctx.beginPath();
+        ctx.arc(x, y + 12, 6, Math.PI, 0, false); ctx.stroke();
     } else {
-        ctx.fillStyle = '#000000'; 
-        ctx.beginPath();
+        ctx.fillStyle = '#000000'; ctx.beginPath();
         ctx.ellipse(leftEyeX, eyeY, 6, 8, 0, 0, Math.PI * 2);
         ctx.ellipse(rightEyeX, eyeY, 6, 8, 0, 0, Math.PI * 2); 
         ctx.fill();
-
-        ctx.fillStyle = '#ffffff'; 
-        ctx.beginPath();
+        ctx.fillStyle = '#ffffff'; ctx.beginPath();
         ctx.arc(leftEyeX, eyeY, 3, 0, Math.PI * 2);
         ctx.arc(rightEyeX, eyeY, 3, 0, Math.PI * 2);
         ctx.fill();
-
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(player.x, player.y + 6, 6, 0, Math.PI, false);
-        ctx.stroke();
+        ctx.strokeStyle = '#000000'; ctx.lineWidth = 3; ctx.beginPath();
+        ctx.arc(x, y + 6, 6, 0, Math.PI, false); ctx.stroke();
     }
+}
 
-    // --- Логика лепестков ---
-    currentAngle += rotationSpeed;
+// === ГЛАВНЫЙ ЦИКЛ РЕНДЕРА ИГРЫ ===
+function gameLoop() {
+    drawHornexGrid();
 
-    // Проверяем, нужно ли восстановить сломанный лепесток (раз в 5 секунд / 300 кадров)
-    petalRegenTimer++;
-    if (petalRegenTimer >= 300) {
-        petalRegenTimer = 0;
-        for (let i = 0; i < petals.length; i++) {
-            if (petals[i].isBroken) {
-                petals[i].isBroken = false;
-                petals[i].hp = petals[i].maxHp;
-                break; // Восстанавливаем по одному лепестку за раз
-            }
-        }
-    }
+    currentAngle += 0.03; // Вращение лепестков синхронно с сервером
 
-    petals.forEach((petal, index) => {
-        if (petal.isBroken) return; // Если сломан — не рисуем и не обрабатываем
+    // 1. Рисуем всех сетевых игроков
+    Object.keys(players).forEach(id => {
+        const p = players[id];
 
-        petal.distance += (targetDistance - petal.distance) * 0.1;
-
-        if (petal.damageTimer > 0) {
-            petal.damageTimer--;
-            petal.currentColor = '#ff3333'; 
-        } else {
-            petal.currentColor = petal.baseColor; 
-        }
-
-        let angle = currentAngle + (index * (Math.PI * 2 / petalCount));
-        let petalX = player.x + Math.cos(angle) * petal.distance;
-        let petalY = player.y + Math.sin(angle) * petal.distance;
-
-        // Рисуем лепесток
+        // Отрисовка тела круглого персонажа
         ctx.beginPath();
-        ctx.arc(petalX, petalY, petal.radius, 0, Math.PI * 2);
-        ctx.fillStyle = petal.currentColor; 
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
         ctx.fill();
         ctx.closePath();
 
-        // Небольшая полоска здоровья под каждым лепестком
-        const pHealthWidth = petal.radius * 2;
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.fillRect(petalX - petal.radius, petalY + petal.radius + 3, pHealthWidth, 3);
-        ctx.fillStyle = '#00ff00';
-        ctx.fillRect(petalX - petal.radius, petalY + petal.radius + 3, pHealthWidth * (petal.hp / petal.maxHp), 3);
+        // Отрисовка глаз и рта
+        drawFace(p.x, p.y, p.emotion);
 
-        mobs.forEach((mob) => {
-            if (mob.isDead || petal.isBroken) return;
+        // Отрисовка лепестков вокруг игрока
+        p.petals.forEach((petal, index) => {
+            if (petal.isBroken) return; // Если сломан на сервере — не рисуем
 
-            if (checkCircleCollision({ x: petalX, y: petalY, radius: petal.radius }, mob)) {
-                if (petal.damageTimer === 0) {
-                    petal.damageTimer = 10;
-                    petal.hp -= 1; // --- ЛЕПЕСТОК ПОЛУЧАЕТ 1 УРОНА ПРИ УДАРЕ ---
-                    
-                    if (petal.hp <= 0) {
-                        petal.isBroken = true; // Ломаем лепесток
-                    }
-                }
+            let angle = currentAngle + (index * (Math.PI * 2 / p.petals.length));
+            let petalX = p.x + Math.cos(angle) * p.petalDistance;
+            let petalY = p.y + Math.sin(angle) * p.petalDistance;
 
-                if (mob.damageTimer === 0) {
-                    mob.damageTimer = 8;
-                }
+            ctx.beginPath();
+            ctx.arc(petalX, petalY, petal.radius, 0, Math.PI * 2);
+            ctx.fillStyle = petal.damageTimer > 0 ? '#ff3333' : '#ffffff'; // Мигает красным при уроне
+            ctx.fill();
+            ctx.closePath();
 
-                mob.hp -= 1; 
-                mob.x += Math.cos(angle) * 12;
-                mob.y += Math.sin(angle) * 12;
-
-                if (mob.hp <= 0) {
-                    mob.isDead = true; 
-                    score += mob.points;
-                    if (scoreElement) {
-                        scoreElement.innerText = "Очки: " + score;
-                    }
-                }
-            }
+            // Маленькая полоска здоровья лепестка
+            const pHealthWidth = petal.radius * 2;
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+            ctx.fillRect(petalX - petal.radius, petalY + petal.radius + 3, pHealthWidth, 3);
+            ctx.fillStyle = '#00ff00';
+            ctx.fillRect(petalX - petal.radius, petalY + petal.radius + 3, pHealthWidth * (petal.hp / petal.maxHp), 3);
         });
-    });
 
-    // --- Столкновения тела игрока ---
-    mobs.forEach((mob) => {
-        if (mob.isDead) return;
-
-        if (checkCircleCollision({ x: player.x, y: player.y, radius: player.radius }, mob)) {
-            player.hp -= mob.damage; 
-            
-            if (player.emotion === 'angry') {
-                mob.hp -= 1; 
-                if (mob.damageTimer === 0) {
-                    mob.damageTimer = 8; 
-                }
-            }
-
-            let dx = player.x - mob.x;
-            let dy = player.y - mob.y;
-            let dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist > 0) {
-                player.x += (dx / dist) * 6; 
-                player.y += (dy / dist) * 6;
-            }
-
-            if (mob.hp <= 0) {
-                mob.isDead = true; 
-                score += mob.points;
-                if (scoreElement) {
-                    scoreElement.innerText = "Очки: " + score;
-                }
-            }
-
-            if (player.hp <= 0) {
-                alert("Вы погибли! Игра перезапустится.");
-                restartGame();
-            }
+        // Основная полоска здоровья над головой игрока
+        const pBarWidth = 50;
+        const pBarX = p.x - pBarWidth / 2;
+        const pBarY = p.y - p.radius - 20;
+        ctx.fillStyle = '#374151';
+        ctx.fillRect(pBarX, pBarY, pBarWidth, 6);
+        if (p.hp > 0) {
+            ctx.fillStyle = '#4ade80';
+            ctx.fillRect(pBarX, pBarY, pBarWidth * (p.hp / p.maxHp), 6);
         }
     });
 
-    mobs = mobs.filter(mob => !mob.isDead);
-
-    // Отрисовка мобов
+    // 2. Рисуем всех сетевых мобов
     mobs.forEach((mob) => {
-        if (mob.damageTimer > 0) {
-            mob.damageTimer--;
-            ctx.fillStyle = '#ffffff'; 
-        } else {
-            ctx.fillStyle = mob.color; 
-        }
-        
+        ctx.fillStyle = mob.damageTimer > 0 ? '#ffffff' : mob.color; // Белая вспышка от удара
         ctx.beginPath();
         ctx.arc(mob.x, mob.y, mob.radius, 0, Math.PI * 2);
         ctx.fill();
         ctx.closePath();
         
+        // Если у моба есть обводка (для черной группы)
         if (mob.strokeColor && mob.damageTimer === 0) {
-            ctx.strokeStyle = mob.strokeColor;
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.arc(mob.x, mob.y, mob.radius - 2, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.closePath();
+            ctx.strokeStyle = mob.strokeColor; ctx.lineWidth = 4; ctx.beginPath();
+            ctx.arc(mob.x, mob.y, mob.radius - 2, 0, Math.PI * 2); ctx.stroke();
         }
         
-        ctx.fillStyle = mob.textColor; 
-        ctx.font = 'bold 12px Arial';
-        ctx.textAlign = 'center';
+        // Текст редкости над мобом
+        ctx.fillStyle = mob.textColor; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center';
         ctx.fillText(mob.name, mob.x, mob.y - mob.radius - 12);
 
         // Полоска здоровья моба
@@ -443,20 +232,6 @@ function gameLoop() {
         ctx.fillStyle = '#00ff00';
         ctx.fillRect(mob.x - mob.radius, mob.y - mob.radius - 6, barWidth * (mob.hp / mob.maxHp), 4);
     });
-
-    // Полоска здоровья игрока
-    const pBarWidth = 50;
-    const pBarHeight = 6;
-    const pBarX = player.x - pBarWidth / 2;
-    const pBarY = player.y - player.radius - 20;
-
-    ctx.fillStyle = '#374151';
-    ctx.fillRect(pBarX, pBarY, pBarWidth, pBarHeight);
-
-    if (player.hp > 0) {
-        ctx.fillStyle = '#4ade80';
-        ctx.fillRect(pBarX, pBarY, pBarWidth * (player.hp / player.maxHp), pBarHeight);
-    }
 
     requestAnimationFrame(gameLoop);
 }
