@@ -35,13 +35,19 @@ const petalCount = 5;
 const rotationSpeed = 0.03;
 let currentAngle = 0;
 
+// Таймер для регенерации лепестков
+let petalRegenTimer = 0;
+
 for (let i = 0; i < petalCount; i++) {
     petals.push({
         distance: 60, 
         radius: 10,
         baseColor: '#ffffff', 
         currentColor: '#ffffff', 
-        damageTimer: 0 
+        damageTimer: 0,
+        hp: 3,       // --- МАКСИМАЛЬНОЕ ХП ЛЕПЕСТКА ---
+        maxHp: 3,
+        isBroken: false
     });
 }
 
@@ -139,6 +145,12 @@ function restartGame() {
     mobs = [];
     player.x = canvas.width / 2;
     player.y = canvas.height / 2;
+    
+    // Восстанавливаем лепестки при перезапуске
+    petals.forEach(petal => {
+        petal.hp = petal.maxHp;
+        petal.isBroken = false;
+    });
 }
 
 // Динамический фон
@@ -279,10 +291,25 @@ function gameLoop() {
         ctx.stroke();
     }
 
-    // --- Лепестки ---
+    // --- Логика лепестков ---
     currentAngle += rotationSpeed;
 
+    // Проверяем, нужно ли восстановить сломанный лепесток (раз в 5 секунд / 300 кадров)
+    petalRegenTimer++;
+    if (petalRegenTimer >= 300) {
+        petalRegenTimer = 0;
+        for (let i = 0; i < petals.length; i++) {
+            if (petals[i].isBroken) {
+                petals[i].isBroken = false;
+                petals[i].hp = petals[i].maxHp;
+                break; // Восстанавливаем по одному лепестку за раз
+            }
+        }
+    }
+
     petals.forEach((petal, index) => {
+        if (petal.isBroken) return; // Если сломан — не рисуем и не обрабатываем
+
         petal.distance += (targetDistance - petal.distance) * 0.1;
 
         if (petal.damageTimer > 0) {
@@ -296,18 +323,31 @@ function gameLoop() {
         let petalX = player.x + Math.cos(angle) * petal.distance;
         let petalY = player.y + Math.sin(angle) * petal.distance;
 
+        // Рисуем лепесток
         ctx.beginPath();
         ctx.arc(petalX, petalY, petal.radius, 0, Math.PI * 2);
         ctx.fillStyle = petal.currentColor; 
         ctx.fill();
         ctx.closePath();
 
+        // Небольшая полоска здоровья под каждым лепестком
+        const pHealthWidth = petal.radius * 2;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.fillRect(petalX - petal.radius, petalY + petal.radius + 3, pHealthWidth, 3);
+        ctx.fillStyle = '#00ff00';
+        ctx.fillRect(petalX - petal.radius, petalY + petal.radius + 3, pHealthWidth * (petal.hp / petal.maxHp), 3);
+
         mobs.forEach((mob) => {
-            if (mob.isDead) return;
+            if (mob.isDead || petal.isBroken) return;
 
             if (checkCircleCollision({ x: petalX, y: petalY, radius: petal.radius }, mob)) {
                 if (petal.damageTimer === 0) {
                     petal.damageTimer = 10;
+                    petal.hp -= 1; // --- ЛЕПЕСТОК ПОЛУЧАЕТ 1 УРОНА ПРИ УДАРЕ ---
+                    
+                    if (petal.hp <= 0) {
+                        petal.isBroken = true; // Ломаем лепесток
+                    }
                 }
 
                 if (mob.damageTimer === 0) {
@@ -329,7 +369,7 @@ function gameLoop() {
         });
     });
 
-    // --- Столкновения тела ---
+    // --- Столкновения тела игрока ---
     mobs.forEach((mob) => {
         if (mob.isDead) return;
 
@@ -391,8 +431,7 @@ function gameLoop() {
             ctx.closePath();
         }
         
-        // --- ИСПРАВЛЕННАЯ ОТРИСОВКА ЦВЕТНОГО НАЗВАНИЯ ---
-        ctx.fillStyle = mob.textColor; // <--- Теперь цвет применяется правильно!
+        ctx.fillStyle = mob.textColor; 
         ctx.font = 'bold 12px Arial';
         ctx.textAlign = 'center';
         ctx.fillText(mob.name, mob.x, mob.y - mob.radius - 12);
