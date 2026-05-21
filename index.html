@@ -2,53 +2,16 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>flozer.PRO — Новая arena лепестков</title>
+    <title>Hornex Style Network Game</title>
     <style>
-        /* Убираем отступы и скроллбары, чтобы игра была на весь экран */
-        body, html {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            background-color: #141414;
-            font-family: sans-serif;
-            
-            /* ЭТОТ БЛОК ЗАПРЕЩАЕТ СИНЕЕ ВЫДЕЛЕНИЕ ПРИ ЗАЖАТИИ МЫШКИ */
-            -webkit-user-select: none; /* Safari */
-            -moz-user-select: none;    /* Firefox */
-            -ms-user-select: none;     /* IE/Edge */
-            user-select: none;         /* Стандартные браузеры */
-        }
-        canvas {
-            display: block;
-        }
-        /* Стильный интерфейс для очков поверх игры */
-        #ui {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            color: #ffffff;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-            pointer-events: none; /* Чтобы мышка кликала сквозь текст */
-        }
-        /* Счетчик очков теперь БЕЛЫЙ */
-        #score { 
-            margin: 0; 
-            font-size: 28px; 
-            color: #ffffff; /* Поставили белый цвет (#ffffff) вместо зеленого */
-            font-weight: bold;
-            letter-spacing: 1px;
-        }
+        body { margin: 0; overflow: hidden; background: #142217; font-family: Arial, sans-serif; }
+        canvas { display: block; }
+        #score { position: absolute; top: 10px; left: 10px; color: white; font-size: 24px; font-weight: bold; font-family: sans-serif; z-index: 10; }
     </style>
 </head>
 <body>
-
-    <div id="ui">
-        <div id="score">Очки: 0</div>
-    </div>
-
+    <div id="score">Очки: 0</div>
     <canvas id="gameCanvas"></canvas>
-
     <script src="script.js"></script>
 </body>
 </html>
