@@ -1,5 +1,5 @@
 const WebSocket = require('ws');
-const server = new WebSocket.Server({ port: 8080 });
+const server = new WebSocket.Server({ port: 3000 });
 
 let players = {};
 let mobs = [];
@@ -7,7 +7,7 @@ let currentAngle = 0;
 
 // Это сообщение ты увидишь в cmd при запуске
 console.log("====================================================");
-console.log(">>> СЕРВЕР ИГРЫ УСПЕШНО ЗАПУЩЕН НА ПОРТУ 8080 <<<");
+console.log(">>> СЕРВЕР ИГРЫ УСПЕШНО ЗАПУЩЕН НА ПОРТУ 3000 <<<");
 console.log("====================================================");
 
 // Функция проверки столкновений (бывшая checkCircleCollision)
