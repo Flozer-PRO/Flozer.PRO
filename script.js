@@ -72,34 +72,34 @@ function spawnMob() {
         let mobType = {};
 
         if (rand < 0.55) {
-            // ЗЕЛЕНАЯ ГРУППА (Hornex ранги)
+            // ЗЕЛЕНАЯ ГРУППА
             const randTier = Math.random();
             if (randTier < 0.60) {
-                mobType = { name: 'Common', radius: 14, color: '#2ecc71', strokeColor: null, maxHp: 3, damage: 0.5, points: 10 };
+                mobType = { name: 'Common', radius: 14, color: '#2ecc71', strokeColor: null, textColor: '#2ecc71', maxHp: 3, damage: 0.5, points: 10 };
             } else if (randTier < 0.90) {
-                mobType = { name: 'Unusual', radius: 17, color: '#27ae60', strokeColor: null, maxHp: 5, damage: 1, points: 15 };
+                mobType = { name: 'Unusual', radius: 17, color: '#27ae60', strokeColor: null, textColor: '#27ae60', maxHp: 5, damage: 1, points: 15 };
             } else {
-                mobType = { name: 'Rare', radius: 20, color: '#1abc9c', strokeColor: null, maxHp: 8, damage: 1.5, points: 20 };
+                mobType = { name: 'Rare', radius: 20, color: '#1abc9c', strokeColor: null, textColor: '#1abc9c', maxHp: 8, damage: 1.5, points: 20 };
             }
         } else if (rand < 0.90) {
-            // КРАСНАЯ ГРУППА (Hornex ранги)
+            // КРАСНАЯ ГРУППА
             const randTier = Math.random();
             if (randTier < 0.60) {
-                mobType = { name: 'Epic', radius: 24, color: '#e67e22', strokeColor: null, maxHp: 12, damage: 2, points: 30 };
+                mobType = { name: 'Epic', radius: 24, color: '#e67e22', strokeColor: null, textColor: '#e67e22', maxHp: 12, damage: 2, points: 30 };
             } else if (randTier < 0.90) {
-                mobType = { name: 'Legendary', radius: 28, color: '#e74c3c', strokeColor: null, maxHp: 18, damage: 3, points: 45 };
+                mobType = { name: 'Legendary', radius: 28, color: '#e74c3c', strokeColor: null, textColor: '#e74c3c', maxHp: 18, damage: 3, points: 45 };
             } else {
-                mobType = { name: 'Mythic', radius: 32, color: '#9b59b6', strokeColor: null, maxHp: 25, damage: 4, points: 60 };
+                mobType = { name: 'Mythic', radius: 32, color: '#9b59b6', strokeColor: null, textColor: '#9b59b6', maxHp: 25, damage: 4, points: 60 };
             }
         } else {
-            // ЧЕРНАЯ ГРУППА (Hornex Боссы)
+            // ЧЕРНАЯ ГРУППА
             const randTier = Math.random();
             if (randTier < 0.60) {
-                mobType = { name: 'Ultra', radius: 38, color: '#111111', strokeColor: '#ffffff', maxHp: 40, damage: 6, points: 100 };
+                mobType = { name: 'Ultra', radius: 38, color: '#111111', strokeColor: '#ffffff', textColor: '#ffffff', maxHp: 40, damage: 6, points: 100 };
             } else if (randTier < 0.90) {
-                mobType = { name: 'Super', radius: 45, color: '#111111', strokeColor: '#e74c3c', maxHp: 60, damage: 8, points: 150 };
+                mobType = { name: 'Super', radius: 45, color: '#111111', strokeColor: '#e74c3c', textColor: '#e74c3c', maxHp: 60, damage: 8, points: 150 };
             } else {
-                mobType = { name: 'Hyper', radius: 55, color: '#111111', strokeColor: '#ffcc00', maxHp: 100, damage: 12, points: 250 };
+                mobType = { name: 'Hyper', radius: 55, color: '#111111', strokeColor: '#ffcc00', textColor: '#ffcc00', maxHp: 100, damage: 12, points: 250 };
             }
         }
 
@@ -109,6 +109,7 @@ function spawnMob() {
             radius: mobType.radius, 
             color: mobType.color,
             strokeColor: mobType.strokeColor,
+            textColor: mobType.textColor, 
             hp: mobType.maxHp,
             maxHp: mobType.maxHp,
             name: mobType.name,
@@ -122,7 +123,7 @@ function spawnMob() {
 
 setInterval(spawnMob, 1200);
 
-// Функция проверки коллизии круг-круг
+// Функция проверки коллизии
 function checkCircleCollision(circle1, circle2) {
     let dx = circle1.x - circle2.x;
     let dy = circle1.y - circle2.y;
@@ -130,7 +131,7 @@ function checkCircleCollision(circle1, circle2) {
     return distance < (circle1.radius + circle2.radius);
 }
 
-// Функция перезапуска игры при смерти
+// Перезапуск игры
 function restartGame() {
     player.hp = player.maxHp;
     score = 0;
@@ -278,7 +279,7 @@ function gameLoop() {
         ctx.stroke();
     }
 
-    // --- Отрисовка лепестков ---
+    // --- Лепестки ---
     currentAngle += rotationSpeed;
 
     petals.forEach((petal, index) => {
@@ -328,7 +329,7 @@ function gameLoop() {
         });
     });
 
-    // --- СТОЛКНОВЕНИЕ ТЕЛА ИГРОКА С МОБАМИ ---
+    // --- Столкновения тела ---
     mobs.forEach((mob) => {
         if (mob.isDead) return;
 
@@ -346,7 +347,7 @@ function gameLoop() {
             let dy = player.y - mob.y;
             let dist = Math.sqrt(dx * dx + dy * dy);
             if (dist > 0) {
-                player.x += (dx / dist) * 6; // Чуть сильнее отталкивание от крупных мобов
+                player.x += (dx / dist) * 6; 
                 player.y += (dy / dist) * 6;
             }
 
@@ -381,22 +382,22 @@ function gameLoop() {
         ctx.fill();
         ctx.closePath();
         
-        // Кастомная жирная обводка для черных боссов (Ultra, Super, Hyper)
         if (mob.strokeColor && mob.damageTimer === 0) {
             ctx.strokeStyle = mob.strokeColor;
-            ctx.lineWidth = 4; // Сделали обводку толще
+            ctx.lineWidth = 4;
             ctx.beginPath();
             ctx.arc(mob.x, mob.y, mob.radius - 2, 0, Math.PI * 2);
             ctx.stroke();
             ctx.closePath();
         }
         
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 10px Arial';
+        // --- ИСПРАВЛЕННАЯ ОТРИСОВКА ЦВЕТНОГО НАЗВАНИЯ ---
+        ctx.fillStyle = mob.textColor; // <--- Теперь цвет применяется правильно!
+        ctx.font = 'bold 12px Arial';
         ctx.textAlign = 'center';
         ctx.fillText(mob.name, mob.x, mob.y - mob.radius - 12);
 
-        // Полоска здоровья моба (адаптируется под размер моба)
+        // Полоска здоровья моба
         const barWidth = mob.radius * 2;
         ctx.fillStyle = '#ff0000';
         ctx.fillRect(mob.x - mob.radius, mob.y - mob.radius - 6, barWidth, 4);
