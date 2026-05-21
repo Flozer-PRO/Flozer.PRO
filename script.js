@@ -11,7 +11,7 @@ window.addEventListener('resize', () => {
 });
 
 // === ПОДКЛЮЧЕНИЕ К СЕРВЕРУ ===
-const socket = new WebSocket('ws://localhost:8080');
+const socket = new WebSocket('ws://localhost:3000');
 
 let myId = null;
 let players = {};
