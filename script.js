@@ -60,7 +60,7 @@ window.addEventListener('contextmenu', (event) => {
     event.preventDefault();
 });
 
-// Изменили const на let, чтобы безопасно фильтровать убитых мобов
+// Массив мобов
 let mobs = [];
 let score = 0;
 
@@ -77,21 +77,21 @@ function spawnMob() {
         if (rand < 0.55) {
             // ЗЕЛЕНАЯ группа
             const name = greenTier[Math.floor(Math.random() * greenTier.length)];
-            mobType = { name: name, size: 25, color: '#2ecc71', strokeColor: null, maxHp: 3, points: 10 };
+            mobType = { name: name, radius: 15, color: '#2ecc71', strokeColor: null, maxHp: 3, points: 10 };
         } else if (rand < 0.90) {
             // КРАСНАЯ группа
             const name = redTier[Math.floor(Math.random() * redTier.length)];
-            mobType = { name: name, size: 40, color: '#e74c3c', strokeColor: null, maxHp: 7, points: 30 };
+            mobType = { name: name, radius: 22, color: '#e74c3c', strokeColor: null, maxHp: 7, points: 30 };
         } else {
             // ЧЕРНАЯ группа
             const name = blackTier[Math.floor(Math.random() * blackTier.length)];
-            mobType = { name: name, size: 60, color: '#111111', strokeColor: '#ffffff', maxHp: 20, points: 100 };
+            mobType = { name: name, radius: 35, color: '#111111', strokeColor: '#ffffff', maxHp: 20, points: 100 };
         }
 
         mobs.push({
-            x: Math.random() * (canvas.width - 70) + 35,
-            y: Math.random() * (canvas.height - 70) + 35,
-            size: mobType.size,
+            x: Math.random() * (canvas.width - 100) + 50,
+            y: Math.random() * (canvas.height - 100) + 50,
+            radius: mobType.radius, // Теперь используем радиус круга вместо размера size
             color: mobType.color,
             strokeColor: mobType.strokeColor,
             hp: mobType.maxHp,
@@ -99,19 +99,19 @@ function spawnMob() {
             name: mobType.name,
             points: mobType.points,
             damageTimer: 0,
-            isDead: false // Флаг для безопасного удаления
+            isDead: false
         });
     }
 }
 
 setInterval(spawnMob, 1200);
 
-function checkCollision(circle, rect) {
-    let closestX = Math.max(rect.x, Math.min(circle.x, rect.x + rect.size));
-    let closestY = Math.max(rect.y, Math.min(circle.y, rect.y + rect.size));
-    let distanceX = circle.x - closestX;
-    let distanceY = circle.y - closestY;
-    return (distanceX * distanceX + distanceY * distanceY) < (circle.radius * circle.radius);
+// ТОЧНАЯ ПРОВЕРКА СТОЛКНОВЕНИЯ: Круг с кругом (Лепесток и Моб)
+function checkCircleCollision(circle1, circle2) {
+    let dx = circle1.x - circle2.x;
+    let dy = circle1.y - circle2.y;
+    let distance = Math.sqrt(dx * dx + dy * dy);
+    return distance < (circle1.radius + circle2.radius);
 }
 
 // Улучшенный динамический фон
@@ -281,9 +281,10 @@ function gameLoop() {
 
         // Проверяем столкновения
         mobs.forEach((mob) => {
-            if (mob.isDead) return; // Игнорируем уже убитых в этом кадре
+            if (mob.isDead) return;
 
-            if (checkCollision({ x: petalX, y: petalY, radius: petal.radius }, mob)) {
+            // Теперь проверяем столкновение КРУГЛОГО лепестка и КРУГЛОГО моба
+            if (checkCircleCollision({ x: petalX, y: petalY, radius: petal.radius }, mob)) {
                 if (petal.damageTimer === 0) {
                     petal.damageTimer = 10;
                 }
@@ -297,7 +298,7 @@ function gameLoop() {
                 mob.y += Math.sin(angle) * 12;
 
                 if (mob.hp <= 0) {
-                    mob.isDead = true; // Просто помечаем труп!
+                    mob.isDead = true; 
                     score += mob.points;
                     if (scoreElement) {
                         scoreElement.innerText = "Очки: " + score;
@@ -307,10 +308,10 @@ function gameLoop() {
         });
     });
 
-    // БЕЗОПАСНАЯ ОЧИСТКА: Удаляем мертвых мобов только ПОСЛЕ всех проверок
+    // Удаляем мертвых мобов
     mobs = mobs.filter(mob => !mob.isDead);
 
-    // Отрисовка мобов
+    // Отрисовка КРУГЛЫХ мобов
     mobs.forEach((mob) => {
         if (mob.damageTimer > 0) {
             mob.damageTimer--;
@@ -319,25 +320,34 @@ function gameLoop() {
             ctx.fillStyle = mob.color; 
         }
         
-        ctx.fillRect(mob.x, mob.y, mob.size, mob.size);
+        // РИСУЕМ КРУГ вместо квадрата!
+        ctx.beginPath();
+        ctx.arc(mob.x, mob.y, mob.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.closePath();
         
+        // Обводка для Черных (Ультра) мобов
         if (mob.strokeColor && mob.damageTimer === 0) {
             ctx.strokeStyle = mob.strokeColor;
             ctx.lineWidth = 3;
-            ctx.strokeRect(mob.x, mob.y, mob.size, mob.size);
+            ctx.beginPath();
+            ctx.arc(mob.x, mob.y, mob.radius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.closePath();
         }
         
-        // Рисуем текст редкости
+        // Текст редкости (центрируется над кругом)
         ctx.fillStyle = '#ffffff';
         ctx.font = '10px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText(mob.name, mob.x + mob.size / 2, mob.y - 16);
+        ctx.fillText(mob.name, mob.x, mob.y - mob.radius - 12);
 
-        // Полоска здоровья
+        // Полоска здоровья (подстраивается под радиус моба)
+        const barWidth = mob.radius * 2;
         ctx.fillStyle = '#ff0000';
-        ctx.fillRect(mob.x, mob.y - 10, mob.size, 4);
+        ctx.fillRect(mob.x - mob.radius, mob.y - mob.radius - 6, barWidth, 4);
         ctx.fillStyle = '#00ff00';
-        ctx.fillRect(mob.x, mob.y - 10, mob.size * (mob.hp / mob.maxHp), 4);
+        ctx.fillRect(mob.x - mob.radius, mob.y - mob.radius - 6, barWidth * (mob.hp / mob.maxHp), 4);
     });
 
     requestAnimationFrame(gameLoop);
