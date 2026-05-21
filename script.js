@@ -18,7 +18,6 @@ const player = {
     color: '#ffcc00', 
     speed: 0.08,
     emotion: 'normal',
-    // --- ДОБАВИЛИ ХП ИГРОКА ---
     hp: 100,
     maxHp: 100
 };
@@ -101,7 +100,7 @@ function spawnMob() {
             maxHp: mobType.maxHp,
             name: mobType.name,
             points: mobType.points,
-            damage: mobType.damage, // Урон, который наносит этот моб
+            damage: mobType.damage, 
             damageTimer: 0,
             isDead: false
         });
@@ -306,7 +305,8 @@ function gameLoop() {
                     mob.damageTimer = 8;
                 }
 
-                mob.hp -= 1; // Урон игрока мобам (1 хп за удар)
+                // Лепестки всегда наносят 1 единицу урона
+                mob.hp -= 1; 
                 mob.x += Math.cos(angle) * 12;
                 mob.y += Math.sin(angle) * 12;
 
@@ -321,14 +321,22 @@ function gameLoop() {
         });
     });
 
-    // --- ПРОВЕРКА УРОНА ИГРОКУ ОТ МОБОВ ---
+    // --- ПРОВЕРКА УРОНА ИГРОКУ ОТ МОБОВ И ТЕЛОМ ИГРОКА ПО МОБАМ ---
     mobs.forEach((mob) => {
         if (mob.isDead) return;
 
         // Если игрок врезается телом в моба
         if (checkCircleCollision({ x: player.x, y: player.y, radius: player.radius }, mob)) {
-            player.hp -= mob.damage; // Игрок получает урон в зависимости от силы моба
+            player.hp -= mob.damage; // Игрок получает урон
             
+            // --- ТЕЛО ИГРОКА НАНОСИТ 1 ЕДИНИЦУ УРОНА В ЗЛОМ РЕЖИМЕ ---
+            if (player.emotion === 'angry') {
+                mob.hp -= 1; // Урон от игрока мобу!
+                if (mob.damageTimer === 0) {
+                    mob.damageTimer = 8; // Включаем белое мерцание у моба
+                }
+            }
+
             // Отталкиваем игрока чуть назад при столкновении
             let dx = player.x - mob.x;
             let dy = player.y - mob.y;
@@ -338,7 +346,16 @@ function gameLoop() {
                 player.y += (dy / dist) * 5;
             }
 
-            // Проверка на гибель
+            // Если моб умер от тарана телом
+            if (mob.hp <= 0) {
+                mob.isDead = true; 
+                score += mob.points;
+                if (scoreElement) {
+                    scoreElement.innerText = "Очки: " + score;
+                }
+            }
+
+            // Проверка на гибель игрока
             if (player.hp <= 0) {
                 alert("Вы погибли! Игра перезапустится.");
                 restartGame();
@@ -349,7 +366,7 @@ function gameLoop() {
     // Удаляем мертвых мобов
     mobs = mobs.filter(mob => !mob.isDead);
 
-    // Отрисовка КРУГЛЫХ мобов (Они стоят на месте!)
+    // Отрисовка КРУГЛЫХ мобов
     mobs.forEach((mob) => {
         if (mob.damageTimer > 0) {
             mob.damageTimer--;
@@ -391,11 +408,9 @@ function gameLoop() {
     const pBarX = player.x - pBarWidth / 2;
     const pBarY = player.y - player.radius - 20;
 
-    // Фон полоски игрока (серый)
     ctx.fillStyle = '#374151';
     ctx.fillRect(pBarX, pBarY, pBarWidth, pBarHeight);
 
-    // Текущее здоровье (ярко-зеленое)
     if (player.hp > 0) {
         ctx.fillStyle = '#4ade80';
         ctx.fillRect(pBarX, pBarY, pBarWidth * (player.hp / player.maxHp), pBarHeight);
